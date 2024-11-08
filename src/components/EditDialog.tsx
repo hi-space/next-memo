@@ -14,6 +14,9 @@ import {
 } from "@mui/material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import ImageIcon from "@mui/icons-material/Image";
+import MdEditor from "react-markdown-editor-lite";
+import MarkdownIt from "markdown-it";
+import "react-markdown-editor-lite/lib/index.css";
 import { Memo } from "@/types/memo";
 
 interface EditDialogProps {
@@ -28,6 +31,8 @@ const isImageFile = (fileName: string) => {
   const extension = fileName.split(".").pop()?.toLowerCase() || "";
   return imageExtensions.includes(extension);
 };
+
+const mdParser = new MarkdownIt();
 
 const EditDialog: React.FC<EditDialogProps> = ({
   open,
@@ -57,6 +62,10 @@ const EditDialog: React.FC<EditDialogProps> = ({
     }
   }, [file]);
 
+  const handleEditorChange = ({ text }: { text: string }) => {
+    setContent(text);
+  };
+
   const handleClose = () => {
     setContent("");
     setFile(null);
@@ -72,18 +81,17 @@ const EditDialog: React.FC<EditDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle>메모 수정</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-          <TextField
-            multiline
-            rows={4}
+          <MdEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            label="메모 내용"
-            fullWidth
+            style={{ height: "300px" }}
+            renderHTML={(text) => mdParser.render(text)}
+            onChange={handleEditorChange}
           />
+
           <Button
             variant="outlined"
             component="label"

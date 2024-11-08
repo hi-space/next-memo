@@ -126,24 +126,7 @@ const MemoList: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {/* <Grid container spacing={2}>
-        {[...memos].map((memo, index) => (
-          <Grid
-            key={memo.id}
-            size={{ xs: 12, sm: 6, md: 4, xl: 2 }}
-            offset={{ md: "auto" }}
-            ref={index === memos.length - 1 ? lastMemoRef : undefined}
-          >
-            <MemoCard
-              memo={memo}
-              onEdit={handleSetEditingMemo}
-              onDelete={handleDelete}
-            />
-          </Grid>
-        ))}
-      </Grid> */}
-
-      <Masonry columns={{ xs: 1, sm: 2, md: 3, xl: 2 }} spacing={2}>
+      <Masonry columns={{ sm: 1, lg: 2 }} spacing={2}>
         {memos.map((memo, index) => (
           <MemoCard
             key={memo.id}

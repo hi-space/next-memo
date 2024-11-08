@@ -13,6 +13,11 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import MdEditor from "react-markdown-editor-lite";
+import MarkdownIt from "markdown-it";
+import "react-markdown-editor-lite/lib/index.css";
+
+const mdParser = new MarkdownIt();
 
 const MemoForm: React.FC = () => {
   const [content, setContent] = useState("");
@@ -20,6 +25,11 @@ const MemoForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
 
   const dispatch = useAppDispatch();
+
+  const handleEditorChange = ({ text }: { text: string }) => {
+    setContent(text);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -56,15 +66,14 @@ const MemoForm: React.FC = () => {
             <AddCircleOutlineIcon sx={{ fontSize: "1.7rem" }} />새 메모
           </Box>
         </Typography>
-        <TextField
-          multiline
-          rows={4}
+
+        <MdEditor
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-          label="메모 내용"
-          required
-          fullWidth
+          style={{ height: "300px" }}
+          renderHTML={(text) => mdParser.render(text)}
+          onChange={handleEditorChange}
         />
+
         <Box
           sx={{
             display: "flex",

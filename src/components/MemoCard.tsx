@@ -14,11 +14,11 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Divider,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { IconButtonProps } from "@mui/material/IconButton";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import MarkdownContent from "@/components/MarkdownContent";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageIcon from "@mui/icons-material/Image";
@@ -84,9 +84,8 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
   return (
     <>
       <Card
-        elevation={2}
+        elevation={3}
         sx={{
-          padding: 1.5,
           transition: "transform 0.3s, box-shadow 0.3s",
           "&:hover": {
             transform: "scale(1.01)",
@@ -107,10 +106,18 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
           />
         ) : null}
 
-        <CardContent onClick={handleOpenDialog}>
-          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-            {memo.content}
-          </Typography>
+        <CardContent
+          onClick={handleOpenDialog}
+          style={{
+            maxHeight: "180px", // 원하는 높이 설정
+            overflow: "hidden", // 내용이 넘칠 경우 숨기기
+            textOverflow: "ellipsis", // 생략 기호 표시
+            display: "-webkit-box", // 줄 수 제한을 위한 설정
+            WebkitBoxOrient: "vertical", // 수직 방향 설정
+            cursor: "pointer",
+          }}
+        >
+          <MarkdownContent content={memo.content} />
         </CardContent>
 
         <CardActions disableSpacing>
@@ -218,16 +225,10 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         sx={{ p: 2 }}
       >
         <DialogContent sx={{ p: 5 }}>
-          {/* 메모 내용 */}
-          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
-            {memo.content}
-          </Typography>
-
-          {/* 이미지 */}
           {memo.fileUrl && isImageFile(memo.fileName || "") && (
             <img
               src={memo.fileUrl}
-              alt={memo.fileName || "Expanded image"}
+              alt={memo.fileName || "image"}
               style={{
                 width: "100%",
                 height: "auto",
@@ -235,6 +236,45 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                 marginBottom: "16px",
               }}
             />
+          )}
+
+          <MarkdownContent content={memo.content} />
+
+          {memo.fileUrl && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Divider textAlign="center" sx={{ mt: 2, mb: 2 }}>
+                첨부파일
+              </Divider>
+
+              {isImageFile(memo.fileName || "") ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <ImageIcon fontSize="small" color="primary" />
+                  <Link
+                    href={memo.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {memo.fileName}
+                  </Link>
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AttachFileIcon fontSize="small" />
+                  <Link
+                    href={memo.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {memo.fileName}
+                  </Link>
+                </Box>
+              )}
+            </Box>
           )}
         </DialogContent>
 
