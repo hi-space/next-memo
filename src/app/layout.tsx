@@ -5,12 +5,6 @@ import { Providers } from "@/store/provider";
 export const metadata: Metadata = {
   title: "Next Memo",
   description: "Next Memo Application",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
 };
 
 export default function RootLayout({
@@ -21,6 +15,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <head>
+          <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' />
+        </head>
         <Providers>
           <ThemeRegistry>{children}</ThemeRegistry>
         </Providers>
