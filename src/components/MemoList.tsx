@@ -8,6 +8,7 @@ import {
   Box,
   Card,
   CardContent,
+  CardMedia,
   Typography,
   Link,
   CircularProgress,
@@ -91,6 +92,19 @@ const MemoList: React.FC = () => {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {memos.map((memo) => (
         <Card key={memo.id} elevation={2}>
+          {memo.fileUrl && isImageFile(memo.fileName || "") ? (
+            <CardMedia
+              component="img"
+              image={memo.fileUrl}
+              alt={memo.fileName || "attached image"}
+              sx={{
+                width: "100%",
+                borderRadius: 1,
+                mt: 1,
+              }}
+            />
+          ) : null}
+
           <CardContent>
             <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
               {memo.content}
@@ -99,25 +113,6 @@ const MemoList: React.FC = () => {
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {isImageFile(memo.fileName || "") ? (
                   <>
-                    <Box
-                      sx={{
-                        mt: 1,
-                        position: "relative",
-                        width: "100%",
-                        maxWidth: "400px",
-                        "& img": {
-                          width: "100%",
-                          height: "auto",
-                          borderRadius: 1,
-                        },
-                      }}
-                    >
-                      <img
-                        src={memo.fileUrl}
-                        alt={memo.fileName || "attached image"}
-                        loading="lazy"
-                      />
-                    </Box>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <ImageIcon fontSize="small" color="primary" />
                       <Link
