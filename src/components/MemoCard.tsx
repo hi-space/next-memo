@@ -91,6 +91,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
             transform: "scale(1.01)",
             boxShadow: 6,
           },
+          borderRadius: "10px",
         }}
       >
         {memo.fileUrl && isImageFile(memo.fileName || "") ? (
@@ -124,7 +125,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
           <Typography
             variant="body2"
             color="textSecondary"
-            sx={{ display: "block" }}
+            sx={{ display: "block", ml: 1 }}
           >
             {formatDateTime(memo.createdAt)}
           </Typography>
@@ -200,18 +201,6 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                 Delete
               </Button>
             </Box>
-
-            {/* <IconButton aria-label="edit memo" onClick={() => onEdit(memo)}>
-              <EditIcon />
-            </IconButton>
-
-            <IconButton
-              aria-label="delete memo"
-              onClick={() => onDelete(memo.id, memo.createdAt)}
-              sx={{ marginLeft: "auto" }}
-            >
-              <DeleteIcon />
-            </IconButton> */}
           </Box>
         </Collapse>
       </Card>

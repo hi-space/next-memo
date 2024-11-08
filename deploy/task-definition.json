@@ -5,6 +5,7 @@
   "cpu": "4096",
   "memory": "8192",
   "executionRoleArn": "arn:aws:iam::913524902871:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::913524902871:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "next-memo",

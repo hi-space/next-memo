@@ -17,6 +17,18 @@ aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-docume
 
 # Role에 Policy 부여
 aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+# S3 전체 접근 권한 부여
+echo "Attaching AmazonS3FullAccess policy..."
+aws iam attach-role-policy \
+  --role-name ecsTaskExecutionRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+# DynamoDB 전체 접근 권한 부여
+echo "Attaching AmazonDynamoDBFullAccess policy..."
+aws iam attach-role-policy \
+  --role-name ecsTaskExecutionRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
 ```
 
 ## 3. VPC, Security Group
@@ -82,4 +94,40 @@ aws ecs create-service \
   --desired-count 1 \
   --launch-type FARGATE \
   --network-configuration "awsvpcConfiguration={subnets=[subnet-0facc6773e5982aa8],securityGroups=[sg-003731847a6a2a436],assignPublicIp=ENABLED}"
+```
+
+## 5. ALB 생성
+
+```sh
+# ALB 보안그룹
+echo "Creating ALB security group..."
+aws ec2 create-security-group --group-name next-memos-alb-sg \
+  --description "Security group for ALB" --vpc-id vpc-0fd0429beef617238 --region ap-northeast-2
+
+aws ec2 authorize-security-group-ingress --group-id sg-0daf9a4401d896508 \
+  --protocol tcp --port 80 --cidr 0.0.0.0/0 --region ap-northeast-2
+
+aws ec2 authorize-security-group-ingress --group-id sg-0daf9a4401d896508 \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0 --region ap-northeast-2
+
+
+# ALB 생성
+aws elbv2 create-load-balancer \
+  --name next-memos-alb \
+  --subnets subnet-0facc6773e5982aa8 subnet-0855efa6cc5b41e3c \
+  --security-groups sg-0daf9a4401d896508 \
+  --scheme internet-facing \
+  --type application \
+  --region ap-northeast-2
+
+# 타겟 그룹 생성
+aws elbv2 create-target-group \
+  --name next-memos-target-group \
+  --protocol HTTP \
+  --port 3000 \
+  --vpc-id vpc-0fd0429beef617238 \
+  --target-type ip \
+  --region ap-northeast-2
+
+
 ```
