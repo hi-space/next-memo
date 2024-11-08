@@ -38,12 +38,14 @@ const EditDialog: React.FC<EditDialogProps> = ({
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isFileDeleted, setIsFileDeleted] = useState(false);
 
   useEffect(() => {
     if (memo) {
       setContent(memo.content);
       setFile(null);
       setPreviewUrl(null);
+      setIsFileDeleted(false);
     }
   }, [memo]);
 
@@ -59,7 +61,14 @@ const EditDialog: React.FC<EditDialogProps> = ({
     setContent("");
     setFile(null);
     setPreviewUrl(null);
+    setIsFileDeleted(false);
     onClose();
+  };
+
+  const handleDeleteFile = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setIsFileDeleted(true);
   };
 
   return (
@@ -90,7 +99,10 @@ const EditDialog: React.FC<EditDialogProps> = ({
             <input
               type="file"
               hidden
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(e) => {
+                setFile(e.target.files?.[0] || null);
+                setIsFileDeleted(false);
+              }}
             />
           </Button>
           {file && (
@@ -115,7 +127,7 @@ const EditDialog: React.FC<EditDialogProps> = ({
               <img src={previewUrl} alt="Preview" />
             </Box>
           )}
-          {!file && memo?.fileName && (
+          {!file && !isFileDeleted && memo?.fileName && (
             <>
               <Typography variant="body2" color="textSecondary">
                 현재 파일: {memo.fileName}
@@ -137,13 +149,23 @@ const EditDialog: React.FC<EditDialogProps> = ({
                   <img src={memo.fileUrl} alt={memo.fileName} />
                 </Box>
               )}
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={handleDeleteFile}
+              >
+                파일 삭제
+              </Button>
             </>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>취소</Button>
-        <Button onClick={() => onSave(content, file)} variant="contained">
+        <Button
+          onClick={() => onSave(content, isFileDeleted ? null : file)}
+          variant="contained"
+        >
           저장
         </Button>
       </DialogActions>

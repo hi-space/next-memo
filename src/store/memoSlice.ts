@@ -1,5 +1,4 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { PayloadAction } from "@reduxjs/toolkit";
 import { Memo } from "@/types/memo";
 
 interface MemoState {
@@ -71,7 +70,7 @@ export const updateMemo = createAsyncThunk(
       body: formData,
     });
     if (!response.ok) throw new Error("메모 수정에 실패했습니다.");
-    return response.json();
+    return await response.json();
   }
 );
 
@@ -83,6 +82,16 @@ const memoSlice = createSlice({
       state.memos = [];
       state.lastEvaluatedKey = null;
       state.hasMore = true;
+    },
+    updateMemoInState: (state, action) => {
+      const updatedMemo = action.payload;
+      state.memos = state.memos.map((memo) =>
+        memo.id === updatedMemo.id ? updatedMemo : memo
+      );
+    },
+    removeMemoFromState: (state, action) => {
+      const id = action.payload;
+      state.memos = state.memos.filter((memo) => memo.id !== id);
     },
   },
   extraReducers: (builder) => {
@@ -136,7 +145,6 @@ const memoSlice = createSlice({
 
         const updatedMemo = action.payload;
 
-        // 새로운 배열을 생성하여 불변성을 유지
         state.memos = state.memos.map((memo) =>
           memo.id === updatedMemo.id ? { ...updatedMemo } : memo
         );

@@ -46,6 +46,10 @@ const MemoList: React.FC = () => {
     }
   }, [dispatch, loading, hasMore]);
 
+  const handleSetEditingMemo = useCallback((memo: Memo) => {
+    setEditingMemo(memo);
+  }, []);
+
   // 초기 로딩
   useEffect(() => {
     dispatch(fetchMemos()).then(() => setInitialLoading(false));
@@ -73,36 +77,55 @@ const MemoList: React.FC = () => {
     [loading, hasMore, loadMore]
   );
 
-  const handleEdit = async (content: string, file: File | null) => {
-    if (!editingMemo) return;
+  const handleEdit = useCallback(
+    async (content: string, file: File | null) => {
+      if (!editingMemo) return;
 
-    const formData = new FormData();
-    formData.append("content", content);
-    formData.append("createdAt", editingMemo.createdAt); // createdAt 추가
-    if (file) {
-      formData.append("file", file);
-    }
-
-    try {
-      await dispatch(updateMemo({ id: editingMemo.id, formData })).unwrap();
-      await dispatch(fetchMemos()).unwrap();
-      setEditingMemo(null);
-    } catch (error) {
-      console.error("Failed to update memo:", error);
-    }
-  };
-
-  const handleDelete = async (id: string, createdAt: string) => {
-    if (window.confirm("정말 이 메모를 삭제하시겠습니까?")) {
-      try {
-        await dispatch(deleteMemo({ id, createdAt })).unwrap();
-        dispatch(resetMemos());
-        dispatch(fetchMemos());
-      } catch (error) {
-        console.error("Failed to delete memo:", error);
+      const formData = new FormData();
+      formData.append("content", content);
+      formData.append("createdAt", editingMemo.createdAt);
+      if (file) {
+        formData.append("file", file);
+      } else {
+        formData.append("deleteFile", "true");
       }
-    }
-  };
+
+      try {
+        const updatedMemo = await dispatch(
+          updateMemo({ id: editingMemo.id, formData })
+        ).unwrap();
+
+        dispatch({
+          type: "memos/updateMemoInState",
+          payload: updatedMemo,
+        });
+
+        setEditingMemo(null);
+      } catch (error) {
+        console.error("Failed to update memo:", error);
+      }
+    },
+    [dispatch, editingMemo]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string, createdAt: string) => {
+      if (window.confirm("정말 이 메모를 삭제하시겠습니까?")) {
+        try {
+          await dispatch(deleteMemo({ id, createdAt })).unwrap();
+
+          // Redux 상태에서 메모 제거
+          dispatch({
+            type: "memos/removeMemoFromState",
+            payload: id,
+          });
+        } catch (error) {
+          console.error("Failed to delete memo:", error);
+        }
+      }
+    },
+    [dispatch]
+  );
 
   if (initialLoading) {
     return (
@@ -118,7 +141,7 @@ const MemoList: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {memos.map((memo) => (
+      {[...memos].map((memo) => (
         <MemoCard
           key={memo.id}
           memo={memo}

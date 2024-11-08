@@ -12,6 +12,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 const MemoForm: React.FC = () => {
   const [content, setContent] = useState("");
@@ -50,8 +51,10 @@ const MemoForm: React.FC = () => {
         onSubmit={handleSubmit}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
-        <Typography variant="h5" component="h2" gutterBottom>
-          NEW Memo
+        <Typography variant="h6" component="h2">
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AddCircleOutlineIcon sx={{ fontSize: "1.7rem" }} />새 메모
+          </Box>
         </Typography>
         <TextField
           multiline

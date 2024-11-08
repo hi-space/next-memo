@@ -6,7 +6,12 @@ export default function Home() {
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        NEXT MEMO
+        <img
+          src="/next-memo.png"
+          alt="NEXT MEMO"
+          height="80"
+          style={{ borderRadius: "8px" }}
+        />
       </Typography>
       <MemoForm />
       <MemoList />

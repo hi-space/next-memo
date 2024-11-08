@@ -81,7 +81,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const id = await params.id;
+    const id = params.id;
     const formData = await request.formData();
     const content = formData.get("content") as string;
     const newFile = formData.get("file") as File | null;
@@ -107,23 +107,28 @@ export async function PUT(
     );
 
     const existingMemo = getMemoResult.Item;
-    let fileUrl = existingMemo?.fileUrl;
-    let fileName = existingMemo?.fileName;
+    if (!existingMemo) {
+      return NextResponse.json(
+        { error: "메모를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+
+    let fileUrl = existingMemo.fileUrl;
+    let fileName = existingMemo.fileName;
+    let presignedUrl = undefined;
 
     // 새 파일이 있다면 기존 파일 삭제 후 새 파일 업로드
     if (newFile) {
-      // 기존 파일이 있다면 삭제
-      if (existingMemo?.fileUrl) {
-        const oldFileKey = existingMemo.fileUrl.split(".com/")[1];
+      // 기존 파일 삭제
+      if (fileUrl) {
+        const oldFileKey = fileUrl.split(".com/")[1];
         await s3Client.send(
           new DeleteObjectCommand({
             Bucket: process.env.AWS_S3_BUCKET!,
             Key: oldFileKey,
           })
         );
-
-        const fileKey = `uploads/${id}-${fileName}`;
-        fileUrl = await generatePresignedUrl(fileKey);
       }
 
       // 새 파일 업로드
@@ -142,6 +147,17 @@ export async function PUT(
       );
 
       fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+      presignedUrl = await generatePresignedUrl(fileUrl.split(".com/")[1]);
+    } else if (formData.get("deleteFile") === "true" && existingMemo?.fileUrl) {
+      const oldFileKey = existingMemo.fileUrl.split(".com/")[1];
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET!,
+          Key: oldFileKey,
+        })
+      );
+      fileUrl = undefined;
+      fileName = undefined;
     }
 
     // UpdateExpression과 ExpressionAttributeValues 구성
@@ -169,7 +185,19 @@ export async function PUT(
         ExpressionAttributeValues: expressionAttributeValues,
       })
     );
-    return NextResponse.json({ success: true });
+
+    // 수정된 메모 데이터를 반환
+    const updatedMemo = {
+      id,
+      type,
+      content,
+      fileName,
+      fileUrl: presignedUrl,
+      createdAt,
+      updatedAt: expressionAttributeValues[":updatedAt"],
+    };
+
+    return NextResponse.json(updatedMemo);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
