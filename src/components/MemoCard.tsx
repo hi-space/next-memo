@@ -46,19 +46,27 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
 
   return (
     <>
-      <Card elevation={2}>
+      <Card
+        elevation={2}
+        onClick={handleOpenDialog}
+        sx={{
+          transition: "transform 0.3s, box-shadow 0.3s",
+          "&:hover": {
+            transform: "scale(1.01)",
+            boxShadow: 6,
+          },
+        }}
+      >
         {memo.fileUrl && isImageFile(memo.fileName || "") ? (
           <CardMedia
             component="img"
             image={memo.fileUrl}
             alt={memo.fileName || "attached image"}
-            onClick={handleOpenDialog}
             sx={{
               width: "100%",
-              maxHeight: "400px",
+              maxHeight: "200px",
               borderRadius: 1,
               mt: 1,
-              cursor: "pointer",
             }}
           />
         ) : null}

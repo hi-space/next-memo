@@ -9,24 +9,9 @@ import {
   updateMemo,
   resetMemos,
 } from "@/store/memoSlice";
-import {
-  Box,
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Link,
-  CircularProgress,
-  Alert,
-  IconButton,
-  CardActions,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-} from "@mui/material";
+import { Box, LinearProgress, Alert } from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import Masonry from "@mui/lab/Masonry";
 import EditDialog from "./EditDialog";
 import { Memo } from "@/types/memo";
 import MemoCard from "./MemoCard";
@@ -130,7 +115,7 @@ const MemoList: React.FC = () => {
   if (initialLoading) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
+        <LinearProgress />
       </Box>
     );
   }
@@ -141,20 +126,39 @@ const MemoList: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {[...memos].map((memo) => (
-        <MemoCard
-          key={memo.id}
-          memo={memo}
-          onEdit={setEditingMemo}
-          onDelete={handleDelete}
-        />
-      ))}
+      {/* <Grid container spacing={2}>
+        {[...memos].map((memo, index) => (
+          <Grid
+            key={memo.id}
+            size={{ xs: 12, sm: 6, md: 4, xl: 2 }}
+            offset={{ md: "auto" }}
+            ref={index === memos.length - 1 ? lastMemoRef : undefined}
+          >
+            <MemoCard
+              memo={memo}
+              onEdit={handleSetEditingMemo}
+              onDelete={handleDelete}
+            />
+          </Grid>
+        ))}
+      </Grid> */}
+
+      <Masonry columns={{ xs: 1, sm: 2, md: 3, xl: 2 }} spacing={2}>
+        {memos.map((memo, index) => (
+          <MemoCard
+            key={memo.id}
+            memo={memo}
+            onEdit={setEditingMemo}
+            onDelete={handleDelete}
+          />
+        ))}
+      </Masonry>
 
       {hasMore && <Box ref={lastMemoRef} sx={{ height: 20 }} />}
 
       {loading && !initialLoading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-          <CircularProgress />
+          <LinearProgress />
         </Box>
       )}
 

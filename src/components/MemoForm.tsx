@@ -79,7 +79,7 @@ const MemoForm: React.FC = () => {
             startIcon={<CloudUploadIcon />}
             sx={{ flex: 1 }}
           >
-            파일 업로드
+            업로드
             <input
               type="file"
               hidden

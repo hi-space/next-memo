@@ -95,7 +95,7 @@ const EditDialog: React.FC<EditDialogProps> = ({
               )
             }
           >
-            파일 업로드
+            업로드
             <input
               type="file"
               hidden
