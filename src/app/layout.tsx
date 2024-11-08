@@ -1,17 +1,16 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import ThemeRegistry from "@/theme/provider";
 import { Providers } from "@/store/provider";
 
 export const metadata: Metadata = {
   title: "Next Memo",
   description: "Next Memo Application",
-};
-
-export const generateViewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
