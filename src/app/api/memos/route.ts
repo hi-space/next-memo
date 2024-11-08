@@ -1,17 +1,10 @@
 // src/app/api/memos/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "@/lib/dynamodb";
 import { v4 as uuidv4 } from "uuid";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-
-const s3Client = new S3Client({
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-  region: process.env.AWS_REGION,
-});
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client } from "@/lib/s3";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,14 +63,19 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const result = await docClient.send(
-      new QueryCommand({
+      new ScanCommand({
         TableName: "Memos",
-        KeyConditionExpression: "id = :id",
-        ScanIndexForward: false,
       })
     );
 
-    return NextResponse.json(result.Items);
+    // createdAt을 기준으로 내림차순 정렬 (최신 글이 위로)
+    const sortedItems =
+      result.Items?.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ) || [];
+
+    return NextResponse.json(sortedItems);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
