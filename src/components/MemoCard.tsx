@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import {
   Card,
+  Collapse,
   CardContent,
   CardMedia,
   Typography,
@@ -14,9 +15,12 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { IconButtonProps } from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageIcon from "@mui/icons-material/Image";
 import { Memo } from "@/types/memo";
 import { formatDateTime } from "@/utils/dateFormat";
@@ -27,6 +31,34 @@ interface MemoCardProps {
   onDelete: (id: string, createdAt: string) => void;
 }
 
+interface ExpandMoreProps extends IconButtonProps {
+  expand: boolean;
+}
+
+const ExpandMore = styled((props: ExpandMoreProps) => {
+  const { expand, ...other } = props;
+  return <IconButton {...other} />;
+})(({ theme }) => ({
+  marginLeft: "auto",
+  transition: theme.transitions.create("transform", {
+    duration: theme.transitions.duration.shortest,
+  }),
+  variants: [
+    {
+      props: ({ expand }) => !expand,
+      style: {
+        transform: "rotate(0deg)",
+      },
+    },
+    {
+      props: ({ expand }) => !!expand,
+      style: {
+        transform: "rotate(180deg)",
+      },
+    },
+  ],
+}));
+
 const isImageFile = (fileName: string) => {
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
   const extension = fileName.split(".").pop()?.toLowerCase() || "";
@@ -35,6 +67,7 @@ const isImageFile = (fileName: string) => {
 
 const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
   const [openDialog, setOpenDialog] = useState(false);
+  const [expanded, setExpanded] = React.useState(false);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -44,12 +77,16 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
     setOpenDialog(false);
   };
 
+  const handleExpandClick = () => {
+    setExpanded(!expanded);
+  };
+
   return (
     <>
       <Card
         elevation={2}
-        onClick={handleOpenDialog}
         sx={{
+          padding: 1.5,
           transition: "transform 0.3s, box-shadow 0.3s",
           "&:hover": {
             transform: "scale(1.01)",
@@ -61,67 +98,115 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
           <CardMedia
             component="img"
             image={memo.fileUrl}
-            alt={memo.fileName || "attached image"}
+            alt={memo.fileName || "image"}
+            onClick={handleOpenDialog}
             sx={{
               width: "100%",
               maxHeight: "200px",
-              borderRadius: 1,
-              mt: 1,
             }}
           />
         ) : null}
 
-        <CardContent>
-          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
+        <CardContent onClick={handleOpenDialog}>
+          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
             {memo.content}
           </Typography>
-          {memo.fileUrl && (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {isImageFile(memo.fileName || "") ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <ImageIcon fontSize="small" color="primary" />
-                  <Link
-                    href={memo.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {memo.fileName}
-                  </Link>
-                </Box>
-              ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AttachFileIcon fontSize="small" />
-                  <Link
-                    href={memo.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {memo.fileName}
-                  </Link>
-                </Box>
-              )}
-            </Box>
-          )}
+        </CardContent>
+
+        <CardActions disableSpacing>
           <Typography
-            variant="caption"
+            variant="body2"
             color="textSecondary"
-            sx={{ mt: 2, display: "block" }}
+            sx={{ display: "block" }}
           >
             {formatDateTime(memo.createdAt)}
           </Typography>
-        </CardContent>
-        <CardActions disableSpacing>
-          <IconButton aria-label="edit memo" onClick={() => onEdit(memo)}>
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            aria-label="delete memo"
-            onClick={() => onDelete(memo.id, memo.createdAt)}
-            sx={{ marginLeft: "auto" }}
+
+          <ExpandMore
+            expand={expanded}
+            onClick={handleExpandClick}
+            aria-expanded={expanded}
+            aria-label="show more"
           >
-            <DeleteIcon />
-          </IconButton>
+            <ExpandMoreIcon />
+          </ExpandMore>
         </CardActions>
+
+        <Collapse in={expanded} timeout="auto" unmountOnExit>
+          <Box sx={{ p: 1 }}>
+            {memo.fileUrl && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  mb: 2,
+                }}
+              >
+                {isImageFile(memo.fileName || "") ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <ImageIcon fontSize="small" color="primary" />
+                    <Link
+                      href={memo.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {memo.fileName}
+                    </Link>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <AttachFileIcon fontSize="small" />
+                    <Link
+                      href={memo.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {memo.fileName}
+                    </Link>
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 1,
+              }}
+            >
+              <Button
+                onClick={() => onEdit(memo)}
+                variant="outlined"
+                color="warning"
+                sx={{ flex: 1 }}
+              >
+                Modify
+              </Button>
+              <Button
+                onClick={() => onDelete(memo.id, memo.createdAt)}
+                variant="outlined"
+                color="error"
+                sx={{ flex: 1 }}
+              >
+                Delete
+              </Button>
+            </Box>
+
+            {/* <IconButton aria-label="edit memo" onClick={() => onEdit(memo)}>
+              <EditIcon />
+            </IconButton>
+
+            <IconButton
+              aria-label="delete memo"
+              onClick={() => onDelete(memo.id, memo.createdAt)}
+              sx={{ marginLeft: "auto" }}
+            >
+              <DeleteIcon />
+            </IconButton> */}
+          </Box>
+        </Collapse>
       </Card>
 
       {/* 확대 모달 Dialog */}
@@ -130,8 +215,14 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         onClose={handleCloseDialog}
         maxWidth="md"
         fullWidth
+        sx={{ p: 2 }}
       >
-        <DialogContent sx={{ p: 2 }}>
+        <DialogContent sx={{ p: 5 }}>
+          {/* 메모 내용 */}
+          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
+            {memo.content}
+          </Typography>
+
           {/* 이미지 */}
           {memo.fileUrl && isImageFile(memo.fileName || "") && (
             <img
@@ -145,25 +236,21 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
               }}
             />
           )}
-          {/* 메모 내용 */}
-          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
-            {memo.content}
-          </Typography>
-          {/* 메모 작성 날짜 */}
+        </DialogContent>
+
+        <DialogActions>
           <Typography variant="caption" color="textSecondary">
             {formatDateTime(memo.createdAt)}
           </Typography>
-        </DialogContent>
-        <DialogActions>
           <Button
             variant="outlined"
-            color="primary"
+            color="warning"
             onClick={() => {
               onEdit(memo);
               handleCloseDialog();
             }}
           >
-            편집
+            Modify
           </Button>
           <Button
             variant="outlined"
@@ -173,9 +260,8 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
               handleCloseDialog();
             }}
           >
-            삭제
+            Delete
           </Button>
-          <Button onClick={handleCloseDialog}>닫기</Button>
         </DialogActions>
       </Dialog>
     </>

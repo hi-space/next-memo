@@ -13,7 +13,8 @@ export async function DELETE(
   request: NextRequest & { params: { id: string } }
 ) {
   try {
-    const id = await request.params.id;
+    const url = request.nextUrl.pathname;
+    const id = url.split("/").pop();
     const { searchParams } = new URL(request.url);
     const createdAt = searchParams.get("createdAt") || "";
     const type = "MEMO";
@@ -77,7 +78,8 @@ export async function DELETE(
 
 export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
-    const id = request.params.id;
+    const url = request.nextUrl.pathname;
+    const id = url.split("/").pop();
     const formData = await request.formData();
     const content = formData.get("content") as string;
     const newFile = formData.get("file") as File | null;
