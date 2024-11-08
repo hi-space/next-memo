@@ -1,0 +1,21 @@
+{
+  "family": "next-memos-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::913524902871:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "next-memo",
+      "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/next-memo:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000
+        }
+      ],
+      "essential": true
+    }
+  ]
+}

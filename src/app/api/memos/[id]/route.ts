@@ -10,11 +10,10 @@ import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, generatePresignedUrl } from "@/lib/s3";
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest & { params: { id: string } }
 ) {
   try {
-    const id = await params.id;
+    const id = await request.params.id;
     const { searchParams } = new URL(request.url);
     const createdAt = searchParams.get("createdAt") || "";
     const type = "MEMO";
@@ -76,12 +75,9 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
-    const id = params.id;
+    const id = request.params.id;
     const formData = await request.formData();
     const content = formData.get("content") as string;
     const newFile = formData.get("file") as File | null;
