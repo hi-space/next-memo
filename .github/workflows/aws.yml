@@ -58,6 +58,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Set environment variables
+        run: |
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> $GITHUB_ENV
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
