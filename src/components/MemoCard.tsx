@@ -11,6 +11,7 @@ import {
   IconButton,
   CardActions,
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -22,6 +23,7 @@ import MarkdownContent from "@/components/MarkdownContent";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageIcon from "@mui/icons-material/Image";
+import CloseIcon from "@mui/icons-material/Close";
 import { Memo } from "@/types/memo";
 import { formatDateTime } from "@/utils/dateFormat";
 
@@ -209,11 +211,28 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
-        sx={{ p: 2 }}
       >
-        <DialogContent sx={{ p: 5 }}>
+        <DialogTitle>
+          <Typography variant="body2" color="textSecondary">
+            {formatDateTime(memo.createdAt)}
+          </Typography>
+        </DialogTitle>
+        <IconButton
+          aria-label="close"
+          onClick={handleCloseDialog}
+          sx={(theme) => ({
+            position: "absolute",
+            right: 8,
+            top: 8,
+            color: theme.palette.grey[500],
+          })}
+        >
+          <CloseIcon />
+        </IconButton>
+
+        <DialogContent dividers>
           {memo.fileUrl && isImageFile(memo.fileName || "") && (
             <img
               src={memo.fileUrl}
@@ -237,7 +256,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
               }}
             >
               <Divider textAlign="center" sx={{ mt: 2, mb: 2 }}>
-                첨부파일
+                첨부 파일
               </Divider>
 
               {isImageFile(memo.fileName || "") ? (
@@ -268,8 +287,8 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         </DialogContent>
 
         <DialogActions>
-          <Typography variant="caption" color="textSecondary">
-            {formatDateTime(memo.createdAt)}
+          <Typography variant="caption" color="textSecondary" sx={{ ml: 1 }}>
+            {formatDateTime(memo.updatedAt)}
           </Typography>
           <Button
             variant="outlined"

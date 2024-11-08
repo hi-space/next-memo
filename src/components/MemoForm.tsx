@@ -13,11 +13,7 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import MdEditor from "react-markdown-editor-lite";
-import MarkdownIt from "markdown-it";
-import "react-markdown-editor-lite/lib/index.css";
-
-const mdParser = new MarkdownIt();
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 const MemoForm: React.FC = () => {
   const [content, setContent] = useState("");
@@ -25,10 +21,6 @@ const MemoForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
 
   const dispatch = useAppDispatch();
-
-  const handleEditorChange = ({ text }: { text: string }) => {
-    setContent(text);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,12 +59,7 @@ const MemoForm: React.FC = () => {
           </Box>
         </Typography>
 
-        <MdEditor
-          value={content}
-          style={{ height: "300px" }}
-          renderHTML={(text) => mdParser.render(text)}
-          onChange={handleEditorChange}
-        />
+        <MarkdownEditor value={content} onChange={setContent} height="400px" />
 
         <Box
           sx={{
