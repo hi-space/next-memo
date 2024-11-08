@@ -2,8 +2,8 @@
   "family": "next-memos-task",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
+  "cpu": "4096",
+  "memory": "8192",
   "executionRoleArn": "arn:aws:iam::913524902871:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
@@ -12,7 +12,8 @@
       "portMappings": [
         {
           "containerPort": 3000,
-          "hostPort": 3000
+          "hostPort": 80,
+          "protocol": "tcp"
         }
       ],
       "essential": true
