@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAppDispatch } from "@/hooks/redux";
-import { createMemo, fetchMemos } from "@/store/memoSlice";
+import { createMemo, fetchMemos, resetMemos } from "@/store/memoSlice";
 import {
   Box,
   TextField,
@@ -16,23 +16,30 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 const MemoForm: React.FC = () => {
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState<boolean>(true);
 
+  const dispatch = useAppDispatch();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("content", content);
-    if (file) {
-      formData.append("file", file);
-    }
+    setLoading(true);
 
     try {
+      const formData = new FormData();
+      formData.append("content", content);
+      if (file) {
+        formData.append("file", file);
+      }
+
       await dispatch(createMemo(formData)).unwrap();
-      await dispatch(fetchMemos()).unwrap();
+      dispatch(resetMemos()); // 목록 리셋
+      dispatch(fetchMemos()); // 다시 로딩
       setContent("");
       setFile(null);
     } catch (error) {
-      console.error("Failed to create memo:", error);
+      console.error(error);
+      alert("메모 작성에 실패했습니다.");
+    } finally {
+      setLoading(false);
     }
   };
 

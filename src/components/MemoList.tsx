@@ -1,9 +1,14 @@
 // src/components/MemoList.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { fetchMemos, deleteMemo, updateMemo } from "@/store/memoSlice";
+import {
+  fetchMemos,
+  deleteMemo,
+  updateMemo,
+  resetMemos,
+} from "@/store/memoSlice";
 import {
   Box,
   Card,
@@ -26,7 +31,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import ImageIcon from "@mui/icons-material/Image";
+import { useInView } from "react-intersection-observer";
 import EditDialog from "./EditDialog";
+import LoadingTrigger from "./LoadingTrigger";
 import { Memo } from "@/types/memo";
 
 const isImageFile = (fileName: string) => {
@@ -37,8 +44,45 @@ const isImageFile = (fileName: string) => {
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { memos, loading, error } = useAppSelector((state) => state.memos);
+  const { memos, loading, error, hasMore } = useAppSelector(
+    (state) => state.memos
+  );
   const [editingMemo, setEditingMemo] = useState<Memo | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      dispatch(fetchMemos());
+    }
+  }, [dispatch, loading, hasMore]);
+
+  // 초기 로딩
+  useEffect(() => {
+    dispatch(fetchMemos()).then(() => setInitialLoading(false));
+  }, [dispatch]);
+
+  // IntersectionObserver 설정
+  const lastMemoRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (loading) return;
+
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      });
+
+      if (node) {
+        observerRef.current.observe(node);
+      }
+    },
+    [loading, hasMore, loadMore]
+  );
 
   const handleEdit = async (content: string, file: File | null) => {
     if (!editingMemo) return;
@@ -57,26 +101,19 @@ const MemoList: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    dispatch(fetchMemos());
-    const interval = setInterval(() => {
-      dispatch(fetchMemos());
-    }, 30 * 60 * 1000); // 30분
-
-    return () => clearInterval(interval);
-  }, [dispatch]);
-
   const handleDelete = async (id: string) => {
     if (window.confirm("정말 이 메모를 삭제하시겠습니까?")) {
       try {
         await dispatch(deleteMemo(id)).unwrap();
+        dispatch(resetMemos());
+        dispatch(fetchMemos());
       } catch (error) {
         console.error("Failed to delete memo:", error);
       }
     }
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
         <CircularProgress />
@@ -163,6 +200,15 @@ const MemoList: React.FC = () => {
           </CardActions>
         </Card>
       ))}
+
+      {/* 로딩 트리거 */}
+      {hasMore && <Box ref={lastMemoRef} sx={{ height: 20 }} />}
+
+      {loading && !initialLoading && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+          <CircularProgress />
+        </Box>
+      )}
 
       <EditDialog
         open={Boolean(editingMemo)}

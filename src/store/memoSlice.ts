@@ -6,19 +6,35 @@ interface MemoState {
   memos: Memo[];
   loading: boolean;
   error: string | null;
+  hasMore: boolean;
+  lastEvaluatedKey: any | null;
 }
 
 const initialState: MemoState = {
   memos: [],
   loading: false,
   error: null,
+  hasMore: true,
+  lastEvaluatedKey: null,
 };
 
-export const fetchMemos = createAsyncThunk("memos/fetchMemos", async () => {
-  const response = await fetch("/api/memos");
-  if (!response.ok) throw new Error("메모를 불러오는데 실패했습니다.");
-  return response.json();
-});
+export const fetchMemos = createAsyncThunk(
+  "memos/fetchMemos",
+  async (_, { getState }) => {
+    const state = getState() as { memos: MemoState };
+    const { lastEvaluatedKey } = state.memos;
+
+    const params = new URLSearchParams();
+    if (lastEvaluatedKey) {
+      params.append("lastKey", JSON.stringify(lastEvaluatedKey));
+    }
+
+    const response = await fetch(`/api/memos?${params}`);
+    if (!response.ok) throw new Error("메모를 불러오는데 실패했습니다.");
+    const data = await response.json();
+    return data;
+  }
+);
 
 export const createMemo = createAsyncThunk(
   "memos/createMemo",
@@ -54,18 +70,41 @@ export const updateMemo = createAsyncThunk(
     return response.json();
   }
 );
+
 const memoSlice = createSlice({
   name: "memos",
   initialState,
-  reducers: {},
+  reducers: {
+    resetMemos: (state) => {
+      state.memos = [];
+      state.lastEvaluatedKey = null;
+      state.hasMore = true;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchMemos.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchMemos.fulfilled, (state, action: PayloadAction<Memo[]>) => {
-        state.memos = action.payload;
+      .addCase(fetchMemos.fulfilled, (state, action) => {
+        // 새로운 메모들을 기존 메모 배열에 추가
+        const newMemos = action.payload.items;
+
+        state.memos = [...state.memos, ...newMemos];
+        // // 초기 로딩인 경우에만 정렬 적용
+        // if (state.memos.length === 0) {
+        //   state.memos = newMemos.sort(
+        //     (a, b) =>
+        //       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        //   );
+        // } else {
+        //   // 이미 정렬된 상태이므로 새로운 메모들만 뒤에 추가
+        //   state.memos = [...state.memos, ...newMemos];
+        // }
+
+        state.lastEvaluatedKey = action.payload.lastEvaluatedKey;
+        state.hasMore = !!action.payload.lastEvaluatedKey;
         state.loading = false;
       })
       .addCase(fetchMemos.rejected, (state, action) => {
@@ -110,3 +149,5 @@ const memoSlice = createSlice({
 });
 
 export default memoSlice.reducer;
+
+export const { resetMemos } = memoSlice.actions;

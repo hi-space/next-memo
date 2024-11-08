@@ -1,6 +1,6 @@
 // src/app/api/memos/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "@/lib/dynamodb";
 import { v4 as uuidv4 } from "uuid";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
         TableName: "Memos",
         Item: {
           id,
+          type: "MEMO",
           content,
           fileName,
           fileUrl,
@@ -60,11 +61,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const lastEvaluatedKey = searchParams.get("lastKey");
+    const limit = 5;
+
     const result = await docClient.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: "Memos",
+        KeyConditionExpression: "#type = :type",
+        ExpressionAttributeNames: {
+          "#type": "type",
+        },
+        ExpressionAttributeValues: {
+          ":type": "MEMO",
+        },
+        Limit: limit,
+        ScanIndexForward: false,
+        ...(lastEvaluatedKey && {
+          ExclusiveStartKey: JSON.parse(lastEvaluatedKey),
+        }),
       })
     );
 
@@ -85,7 +102,10 @@ export async function GET() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    return NextResponse.json(sortedItems);
+    return NextResponse.json({
+      items: sortedItems,
+      lastEvaluatedKey: result.LastEvaluatedKey || null,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
