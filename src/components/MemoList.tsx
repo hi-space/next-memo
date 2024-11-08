@@ -24,8 +24,15 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import ImageIcon from "@mui/icons-material/Image";
 import EditDialog from "./EditDialog";
 import { Memo } from "@/types/memo";
+
+const isImageFile = (fileName: string) => {
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
+  const extension = fileName.split(".").pop()?.toLowerCase() || "";
+  return imageExtensions.includes(extension);
+};
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -51,6 +58,11 @@ const MemoList: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchMemos());
+    const interval = setInterval(() => {
+      dispatch(fetchMemos());
+    }, 30 * 60 * 1000); // 30분
+
+    return () => clearInterval(interval);
   }, [dispatch]);
 
   const handleDelete = async (id: string) => {
@@ -84,15 +96,51 @@ const MemoList: React.FC = () => {
               {memo.content}
             </Typography>
             {memo.fileUrl && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <AttachFileIcon fontSize="small" />
-                <Link
-                  href={memo.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {memo.fileName}
-                </Link>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {isImageFile(memo.fileName || "") ? (
+                  <>
+                    <Box
+                      sx={{
+                        mt: 1,
+                        position: "relative",
+                        width: "100%",
+                        maxWidth: "400px",
+                        "& img": {
+                          width: "100%",
+                          height: "auto",
+                          borderRadius: 1,
+                        },
+                      }}
+                    >
+                      <img
+                        src={memo.fileUrl}
+                        alt={memo.fileName || "attached image"}
+                        loading="lazy"
+                      />
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <ImageIcon fontSize="small" color="primary" />
+                      <Link
+                        href={memo.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {memo.fileName}
+                      </Link>
+                    </Box>
+                  </>
+                ) : (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <AttachFileIcon fontSize="small" />
+                    <Link
+                      href={memo.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {memo.fileName}
+                    </Link>
+                  </Box>
+                )}
               </Box>
             )}
             <Typography

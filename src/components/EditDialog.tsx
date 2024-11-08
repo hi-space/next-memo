@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import ImageIcon from "@mui/icons-material/Image";
 import { Memo } from "@/types/memo";
 
 interface EditDialogProps {
@@ -22,6 +23,12 @@ interface EditDialogProps {
   onSave: (content: string, file: File | null) => void;
 }
 
+const isImageFile = (fileName: string) => {
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
+  const extension = fileName.split(".").pop()?.toLowerCase() || "";
+  return imageExtensions.includes(extension);
+};
+
 const EditDialog: React.FC<EditDialogProps> = ({
   open,
   memo,
@@ -30,22 +37,28 @@ const EditDialog: React.FC<EditDialogProps> = ({
 }) => {
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (memo) {
       setContent(memo.content);
       setFile(null);
+      setPreviewUrl(null);
     }
   }, [memo]);
 
-  const handleSave = () => {
-    onSave(content, file);
-    onClose();
-  };
+  useEffect(() => {
+    if (file && isImageFile(file.name)) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file]);
 
   const handleClose = () => {
     setContent("");
     setFile(null);
+    setPreviewUrl(null);
     onClose();
   };
 
@@ -65,7 +78,13 @@ const EditDialog: React.FC<EditDialogProps> = ({
           <Button
             variant="outlined"
             component="label"
-            startIcon={<AttachFileIcon />}
+            startIcon={
+              file && isImageFile(file.name) ? (
+                <ImageIcon />
+              ) : (
+                <AttachFileIcon />
+              )
+            }
           >
             파일 업로드
             <input
@@ -79,16 +98,52 @@ const EditDialog: React.FC<EditDialogProps> = ({
               새로 선택된 파일: {file.name}
             </Typography>
           )}
-          {memo?.fileName && !file && (
-            <Typography variant="body2" color="textSecondary">
-              현재 파일: {memo.fileName}
-            </Typography>
+          {previewUrl && (
+            <Box
+              sx={{
+                mt: 1,
+                position: "relative",
+                width: "100%",
+                maxWidth: "400px",
+                "& img": {
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: 1,
+                },
+              }}
+            >
+              <img src={previewUrl} alt="Preview" />
+            </Box>
+          )}
+          {!file && memo?.fileName && (
+            <>
+              <Typography variant="body2" color="textSecondary">
+                현재 파일: {memo.fileName}
+              </Typography>
+              {memo.fileUrl && isImageFile(memo.fileName) && (
+                <Box
+                  sx={{
+                    mt: 1,
+                    position: "relative",
+                    width: "100%",
+                    maxWidth: "400px",
+                    "& img": {
+                      width: "100%",
+                      height: "auto",
+                      borderRadius: 1,
+                    },
+                  }}
+                >
+                  <img src={memo.fileUrl} alt={memo.fileName} />
+                </Box>
+              )}
+            </>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>취소</Button>
-        <Button onClick={handleSave} variant="contained">
+        <Button onClick={() => onSave(content, file)} variant="contained">
           저장
         </Button>
       </DialogActions>

@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "@/lib/dynamodb";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client } from "@/lib/s3";
+import { s3Client, generatePresignedUrl } from "@/lib/s3";
 
 export async function DELETE(
   request: NextRequest,
@@ -62,7 +62,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const id = await params.id; // params.id를 await로 처리
+    const id = await params.id;
     const formData = await request.formData();
     const content = formData.get("content") as string;
     const newFile = formData.get("file") as File | null;
@@ -90,6 +90,9 @@ export async function PUT(
             Key: oldFileKey,
           })
         );
+
+        const fileKey = `uploads/${id}-${fileName}`;
+        fileUrl = await generatePresignedUrl(fileKey);
       }
 
       // 새 파일 업로드

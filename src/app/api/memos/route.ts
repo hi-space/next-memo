@@ -4,7 +4,7 @@ import { PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "@/lib/dynamodb";
 import { v4 as uuidv4 } from "uuid";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client } from "@/lib/s3";
+import { s3Client, generatePresignedUrl } from "@/lib/s3";
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,12 +68,22 @@ export async function GET() {
       })
     );
 
-    // createdAt을 기준으로 내림차순 정렬 (최신 글이 위로)
-    const sortedItems =
-      result.Items?.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ) || [];
+    // 각 메모의 fileUrl을 presigned URL로 변환
+    const items = await Promise.all(
+      (result.Items || []).map(async (item) => {
+        if (item.fileUrl) {
+          const fileKey = item.fileUrl.split(".com/")[1];
+          item.fileUrl = await generatePresignedUrl(fileKey);
+        }
+        return item;
+      })
+    );
+
+    // createdAt을 기준으로 내림차순 정렬
+    const sortedItems = items.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return NextResponse.json(sortedItems);
   } catch (error) {
