@@ -12,6 +12,9 @@ IGW_NAME="next-memos-igw"
 SG_NAME="next-memos-sg"
 TASK_FAMILY="next-memos-task"
 CONTAINER_NAME="next-memos"
+ALB_NAME="next-memos-alb"
+TG_NAME="next-memos-target-group"
+LISTENER_PORT=80
 
 # ECR 리포지토리 생성
 echo "Creating ECR repository..."
@@ -95,3 +98,57 @@ aws ecs create-service \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNET1_ID,$SUBNET2_ID],securityGroups=[$SG_ID],assignPublicIp=ENABLED}"
 
 echo "Deployment completed successfully."
+
+# ALB 보안 그룹 생성 (포트 80, 443 허용)
+echo "Creating ALB security group..."
+ALB_SG_ID=$(aws ec2 create-security-group --group-name ${ALB_NAME}-sg \
+  --description "Security group for ALB" --vpc-id $VPC_ID --region $REGION \
+  --query 'GroupId' --output text)
+
+aws ec2 authorize-security-group-ingress --group-id $ALB_SG_ID \
+  --protocol tcp --port 80 --cidr 0.0.0.0/0 --region $REGION
+
+aws ec2 authorize-security-group-ingress --group-id $ALB_SG_ID \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0 --region $REGION
+
+# ALB 생성
+echo "Creating Application Load Balancer..."
+ALB_ARN=$(aws elbv2 create-load-balancer \
+  --name $ALB_NAME \
+  --subnets $SUBNET1_ID $SUBNET2_ID \
+  --security-groups $ALB_SG_ID \
+  --scheme internet-facing \
+  --type application \
+  --region $REGION \
+  --query 'LoadBalancers[0].LoadBalancerArn' --output text)
+
+# 타겟 그룹 생성
+echo "Creating Target Group..."
+TG_ARN=$(aws elbv2 create-target-group \
+  --name $TG_NAME \
+  --protocol HTTP \
+  --port 3000 \
+  --vpc-id $VPC_ID \
+  --target-type ip \
+  --region $REGION \
+  --query 'TargetGroups[0].TargetGroupArn' --output text)
+
+# ALB 리스너 생성
+echo "Creating ALB Listener..."
+aws elbv2 create-listener \
+  --load-balancer-arn $ALB_ARN \
+  --protocol HTTP \
+  --port $LISTENER_PORT \
+  --default-actions Type=forward,TargetGroupArn=$TG_ARN \
+  --region $REGION
+
+# ECS 서비스 업데이트 (ALB 연결)
+echo "Updating ECS service with ALB..."
+aws ecs update-service \
+  --cluster $CLUSTER_NAME \
+  --service $SERVICE_NAME \
+  --load-balancers "targetGroupArn=$TG_ARN,containerName=$CONTAINER_NAME,containerPort=3000" \
+  --desired-count 1 \
+  --region $REGION
+
+echo "ALB and ECS service configuration completed successfully."
