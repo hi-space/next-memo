@@ -50,10 +50,14 @@ export const createMemo = createAsyncThunk(
 
 export const deleteMemo = createAsyncThunk(
   "memos/deleteMemo",
-  async (id: string) => {
-    const response = await fetch(`/api/memos/${id}`, {
-      method: "DELETE",
-    });
+  async ({ id, createdAt }: { id: string; createdAt: string }) => {
+    const encodedCreatedAt = encodeURIComponent(createdAt);
+    const response = await fetch(
+      `/api/memos/${id}?createdAt=${encodedCreatedAt}`,
+      {
+        method: "DELETE",
+      }
+    );
     if (!response.ok) throw new Error("메모 삭제에 실패했습니다.");
     return id;
   }
@@ -90,18 +94,7 @@ const memoSlice = createSlice({
       .addCase(fetchMemos.fulfilled, (state, action) => {
         // 새로운 메모들을 기존 메모 배열에 추가
         const newMemos = action.payload.items;
-
         state.memos = [...state.memos, ...newMemos];
-        // // 초기 로딩인 경우에만 정렬 적용
-        // if (state.memos.length === 0) {
-        //   state.memos = newMemos.sort(
-        //     (a, b) =>
-        //       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        //   );
-        // } else {
-        //   // 이미 정렬된 상태이므로 새로운 메모들만 뒤에 추가
-        //   state.memos = [...state.memos, ...newMemos];
-        // }
 
         state.lastEvaluatedKey = action.payload.lastEvaluatedKey;
         state.hasMore = !!action.payload.lastEvaluatedKey;
@@ -138,8 +131,15 @@ const memoSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateMemo.fulfilled, (state) => {
+      .addCase(updateMemo.fulfilled, (state, action) => {
         state.loading = false;
+
+        const updatedMemo = action.payload;
+
+        // 새로운 배열을 생성하여 불변성을 유지
+        state.memos = state.memos.map((memo) =>
+          memo.id === updatedMemo.id ? { ...updatedMemo } : memo
+        );
       })
       .addCase(updateMemo.rejected, (state, action) => {
         state.loading = false;

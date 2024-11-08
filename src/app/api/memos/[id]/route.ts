@@ -14,18 +14,35 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Next.js 13에서는 params를 비동기적으로 처리해야 합니다
     const id = await params.id;
+    const { searchParams } = new URL(request.url);
+    const createdAt = searchParams.get("createdAt") || "";
+    const type = "MEMO";
+
+    if (!createdAt) {
+      return NextResponse.json(
+        { error: "createdAt is required" },
+        { status: 400 }
+      );
+    }
 
     // 메모 정보 조회
     const getMemoResult = await docClient.send(
       new GetCommand({
         TableName: "Memos",
         Key: {
-          id: id,
+          type,
+          createdAt,
         },
       })
     );
+
+    if (!getMemoResult.Item) {
+      return NextResponse.json(
+        { error: "메모를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
 
     // S3에 업로드된 파일이 있다면 삭제
     if (getMemoResult.Item?.fileUrl) {
@@ -43,7 +60,8 @@ export async function DELETE(
       new DeleteCommand({
         TableName: "Memos",
         Key: {
-          id: id,
+          type,
+          createdAt,
         },
       })
     );
@@ -57,6 +75,7 @@ export async function DELETE(
     );
   }
 }
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -66,12 +85,24 @@ export async function PUT(
     const formData = await request.formData();
     const content = formData.get("content") as string;
     const newFile = formData.get("file") as File | null;
+    const type = "MEMO";
+    const createdAt = formData.get("createdAt") as string;
+
+    if (!createdAt) {
+      return NextResponse.json(
+        { error: "createdAt is required" },
+        { status: 400 }
+      );
+    }
 
     // 기존 메모 정보 조회
     const getMemoResult = await docClient.send(
       new GetCommand({
         TableName: "Memos",
-        Key: { id },
+        Key: {
+          type,
+          createdAt,
+        },
       })
     );
 
@@ -113,14 +144,14 @@ export async function PUT(
       fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
     }
 
-    // UpdateExpression과 ExpressionAttributeValues를 조건부로 구성
+    // UpdateExpression과 ExpressionAttributeValues 구성
     let updateExpression = "SET content = :content, updatedAt = :updatedAt";
-    let expressionAttributeValues: any = {
+    const expressionAttributeValues: any = {
       ":content": content,
       ":updatedAt": new Date().toISOString(),
     };
 
-    if (fileName !== undefined) {
+    if (fileName) {
       updateExpression += ", fileName = :fileName, fileUrl = :fileUrl";
       expressionAttributeValues[":fileName"] = fileName;
       expressionAttributeValues[":fileUrl"] = fileUrl;
@@ -130,12 +161,14 @@ export async function PUT(
     await docClient.send(
       new UpdateCommand({
         TableName: "Memos",
-        Key: { id },
+        Key: {
+          type,
+          createdAt,
+        },
         UpdateExpression: updateExpression,
         ExpressionAttributeValues: expressionAttributeValues,
       })
     );
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);

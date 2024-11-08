@@ -50,8 +50,8 @@ const MemoForm: React.FC = () => {
         onSubmit={handleSubmit}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
-        <Typography variant="h6" component="h2" gutterBottom>
-          새 메모 작성
+        <Typography variant="h5" component="h2" gutterBottom>
+          NEW Memo
         </Typography>
         <TextField
           multiline
@@ -62,32 +62,41 @@ const MemoForm: React.FC = () => {
           required
           fullWidth
         />
-        <Button
-          variant="outlined"
-          component="label"
-          startIcon={<CloudUploadIcon />}
-          sx={{ mt: 1 }}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 2,
+          }}
         >
-          파일 업로드
-          <input
-            type="file"
-            hidden
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-        </Button>
-        {file && (
-          <Typography variant="body2" color="textSecondary">
-            선택된 파일: {file.name}
-          </Typography>
-        )}
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          sx={{ mt: 2 }}
-        >
-          저장
-        </Button>
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<CloudUploadIcon />}
+            sx={{ flex: 1 }}
+          >
+            파일 업로드
+            <input
+              type="file"
+              hidden
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </Button>
+          {file && (
+            <Typography variant="body2" color="textSecondary">
+              선택된 파일: {file.name}
+            </Typography>
+          )}
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            sx={{ flex: 1 }}
+          >
+            저장
+          </Button>
+        </Box>
       </Box>
     </Paper>
   );

@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const lastEvaluatedKey = searchParams.get("lastKey");
-    const limit = 5;
+    const limit = 10;
 
     const result = await docClient.send(
       new QueryCommand({
@@ -96,14 +96,8 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // createdAt을 기준으로 내림차순 정렬
-    const sortedItems = items.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
     return NextResponse.json({
-      items: sortedItems,
+      items: items,
       lastEvaluatedKey: result.LastEvaluatedKey || null,
     });
   } catch (error) {

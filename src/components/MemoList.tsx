@@ -27,20 +27,9 @@ import {
   TextField,
   Button,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import ImageIcon from "@mui/icons-material/Image";
-import { useInView } from "react-intersection-observer";
 import EditDialog from "./EditDialog";
-import LoadingTrigger from "./LoadingTrigger";
 import { Memo } from "@/types/memo";
-
-const isImageFile = (fileName: string) => {
-  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
-  const extension = fileName.split(".").pop()?.toLowerCase() || "";
-  return imageExtensions.includes(extension);
-};
+import MemoCard from "./MemoCard";
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -89,6 +78,7 @@ const MemoList: React.FC = () => {
 
     const formData = new FormData();
     formData.append("content", content);
+    formData.append("createdAt", editingMemo.createdAt); // createdAt 추가
     if (file) {
       formData.append("file", file);
     }
@@ -96,15 +86,16 @@ const MemoList: React.FC = () => {
     try {
       await dispatch(updateMemo({ id: editingMemo.id, formData })).unwrap();
       await dispatch(fetchMemos()).unwrap();
+      setEditingMemo(null);
     } catch (error) {
       console.error("Failed to update memo:", error);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, createdAt: string) => {
     if (window.confirm("정말 이 메모를 삭제하시겠습니까?")) {
       try {
-        await dispatch(deleteMemo(id)).unwrap();
+        await dispatch(deleteMemo({ id, createdAt })).unwrap();
         dispatch(resetMemos());
         dispatch(fetchMemos());
       } catch (error) {
@@ -128,80 +119,14 @@ const MemoList: React.FC = () => {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {memos.map((memo) => (
-        <Card key={memo.id} elevation={2}>
-          {memo.fileUrl && isImageFile(memo.fileName || "") ? (
-            <CardMedia
-              component="img"
-              image={memo.fileUrl}
-              alt={memo.fileName || "attached image"}
-              sx={{
-                width: "100%",
-                borderRadius: 1,
-                mt: 1,
-              }}
-            />
-          ) : null}
-
-          <CardContent>
-            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
-              {memo.content}
-            </Typography>
-            {memo.fileUrl && (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {isImageFile(memo.fileName || "") ? (
-                  <>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <ImageIcon fontSize="small" color="primary" />
-                      <Link
-                        href={memo.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {memo.fileName}
-                      </Link>
-                    </Box>
-                  </>
-                ) : (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <AttachFileIcon fontSize="small" />
-                    <Link
-                      href={memo.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {memo.fileName}
-                    </Link>
-                  </Box>
-                )}
-              </Box>
-            )}
-            <Typography
-              variant="caption"
-              color="textSecondary"
-              sx={{ mt: 2, display: "block" }}
-            >
-              {new Date(memo.createdAt).toLocaleString()}
-            </Typography>
-          </CardContent>
-          <CardActions disableSpacing>
-            <IconButton
-              aria-label="edit memo"
-              onClick={() => setEditingMemo(memo)}
-            >
-              <EditIcon />
-            </IconButton>
-            <IconButton
-              aria-label="delete memo"
-              onClick={() => handleDelete(memo.id)}
-              sx={{ marginLeft: "auto" }}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </CardActions>
-        </Card>
+        <MemoCard
+          key={memo.id}
+          memo={memo}
+          onEdit={setEditingMemo}
+          onDelete={handleDelete}
+        />
       ))}
 
-      {/* 로딩 트리거 */}
       {hasMore && <Box ref={lastMemoRef} sx={{ height: 20 }} />}
 
       {loading && !initialLoading && (
