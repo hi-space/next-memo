@@ -1,20 +1,20 @@
 // src/components/MemoList.tsx
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import {
   fetchMemos,
   deleteMemo,
   updateMemo,
   resetMemos,
-} from "@/store/memoSlice";
-import { Box, LinearProgress, Alert } from "@mui/material";
-import Grid from "@mui/material/Grid2";
-import Masonry from "@mui/lab/Masonry";
-import EditDialog from "./EditDialog";
-import { Memo } from "@/types/memo";
-import MemoCard from "./MemoCard";
+} from '@/store/memoSlice';
+import { Box, LinearProgress, Alert } from '@mui/material';
+import Grid from '@mui/material/Grid2';
+import Masonry from '@mui/lab/Masonry';
+import EditDialog from './EditDialog';
+import { Memo } from '@/types/memo';
+import MemoCard from './MemoCard';
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -63,31 +63,36 @@ const MemoList: React.FC = () => {
   );
 
   const handleEdit = useCallback(
-    async (content: string, file: File | null) => {
+    async (content: string, newFiles: File[], deletedFileUrls: string[]) => {
       if (!editingMemo) return;
 
       const formData = new FormData();
-      formData.append("content", content);
-      formData.append("createdAt", editingMemo.createdAt);
-      if (file) {
-        formData.append("file", file);
-      } else {
-        formData.append("deleteFile", "true");
-      }
+      formData.append('content', content);
+      formData.append('createdAt', editingMemo.createdAt);
 
+      // 삭제할 파일 URL 목록 추가
+      formData.append('deletedFileUrls', JSON.stringify(deletedFileUrls));
+
+      // 새 파일들 추가
+      newFiles.forEach((file, index) => {
+        formData.append(`files[${index}]`, file);
+      });
+
+      console.log(formData);
       try {
         const updatedMemo = await dispatch(
           updateMemo({ id: editingMemo.id, formData })
         ).unwrap();
 
         dispatch({
-          type: "memos/updateMemoInState",
+          type: 'memos/updateMemoInState',
           payload: updatedMemo,
         });
 
         setEditingMemo(null);
       } catch (error) {
-        console.error("Failed to update memo:", error);
+        console.error('Failed to update memo:', error);
+        alert('메모 수정에 실패했습니다.');
       }
     },
     [dispatch, editingMemo]
@@ -95,17 +100,17 @@ const MemoList: React.FC = () => {
 
   const handleDelete = useCallback(
     async (id: string, createdAt: string) => {
-      if (window.confirm("정말 이 메모를 삭제하시겠습니까?")) {
+      if (window.confirm('정말 이 메모를 삭제하시겠습니까?')) {
         try {
           await dispatch(deleteMemo({ id, createdAt })).unwrap();
 
           // Redux 상태에서 메모 제거
           dispatch({
-            type: "memos/removeMemoFromState",
+            type: 'memos/removeMemoFromState',
             payload: id,
           });
         } catch (error) {
-          console.error("Failed to delete memo:", error);
+          console.error('Failed to delete memo:', error);
         }
       }
     },
@@ -114,18 +119,18 @@ const MemoList: React.FC = () => {
 
   if (initialLoading) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box display='flex' justifyContent='center' p={4}>
         <LinearProgress />
       </Box>
     );
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return <Alert severity='error'>{error}</Alert>;
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Masonry columns={{ sm: 1, lg: 2 }} spacing={2}>
         {memos.map((memo, index) => (
           <MemoCard
@@ -140,7 +145,7 @@ const MemoList: React.FC = () => {
       {hasMore && <Box ref={lastMemoRef} sx={{ height: 20 }} />}
 
       {loading && !initialLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
           <LinearProgress />
         </Box>
       )}

@@ -1,5 +1,5 @@
 // src/components/MemoCard.tsx
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Card,
   Collapse,
@@ -16,16 +16,18 @@ import {
   DialogActions,
   Button,
   Divider,
-} from "@mui/material";
-import { styled } from "@mui/material/styles";
-import { IconButtonProps } from "@mui/material/IconButton";
-import MarkdownContent from "@/components/MarkdownContent";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ImageIcon from "@mui/icons-material/Image";
-import CloseIcon from "@mui/icons-material/Close";
-import { Memo } from "@/types/memo";
-import { formatDateTime } from "@/utils/dateFormat";
+  Chip,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { IconButtonProps } from '@mui/material/IconButton';
+import MarkdownContent from '@/components/MarkdownContent';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ImageIcon from '@mui/icons-material/Image';
+import CloseIcon from '@mui/icons-material/Close';
+import { Memo } from '@/types/memo';
+import { formatDateTime } from '@/utils/dateFormat';
 
 interface MemoCardProps {
   memo: Memo;
@@ -41,35 +43,37 @@ const ExpandMore = styled((props: ExpandMoreProps) => {
   const { expand, ...other } = props;
   return <IconButton {...other} />;
 })(({ theme }) => ({
-  marginLeft: "auto",
-  transition: theme.transitions.create("transform", {
+  marginLeft: 'auto',
+  transition: theme.transitions.create('transform', {
     duration: theme.transitions.duration.shortest,
   }),
   variants: [
     {
       props: ({ expand }) => !expand,
       style: {
-        transform: "rotate(0deg)",
+        transform: 'rotate(0deg)',
       },
     },
     {
       props: ({ expand }) => !!expand,
       style: {
-        transform: "rotate(180deg)",
+        transform: 'rotate(180deg)',
       },
     },
   ],
 }));
 
 const isImageFile = (fileName: string) => {
-  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
-  const extension = fileName.split(".").pop()?.toLowerCase() || "";
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+  const extension = fileName.split('.').pop()?.toLowerCase() || '';
   return imageExtensions.includes(extension);
 };
 
 const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [expanded, setExpanded] = React.useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -83,234 +87,399 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
     setExpanded(!expanded);
   };
 
+  // const handleOpenDialog = () => {
+  //   setOpenDialog(true);
+
+  //   // 첫 번째 이미지의 URL로 프리뷰 설정
+  //   const firstImage = memo.files?.find((file) => isImageFile(file.fileName));
+  //   if (firstImage) {
+  //     setPreviewImage(firstImage.fileUrl);
+  //     setPreviewOpen(true);
+  //   }
+  // };
+
+  const handlePreviewImage = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+    setPreviewOpen(true);
+  };
+
+  const imageFiles =
+    memo.files?.filter((file) => isImageFile(file.fileName)) || [];
+
   return (
     <>
       <Card
         elevation={3}
         sx={{
-          transition: "transform 0.3s, box-shadow 0.3s",
-          "&:hover": {
-            transform: "scale(1.01)",
+          transition: 'transform 0.3s, box-shadow 0.3s',
+          '&:hover': {
+            transform: 'scale(1.01)',
             boxShadow: 6,
           },
-          borderRadius: "10px",
-        }}
-      >
-        {memo.fileUrl && isImageFile(memo.fileName || "") ? (
-          <CardMedia
-            component="img"
-            image={memo.fileUrl}
-            alt={memo.fileName || "image"}
-            onClick={handleOpenDialog}
-            sx={{
-              width: "100%",
-              maxHeight: "200px",
-            }}
-          />
-        ) : null}
+          borderRadius: '10px',
+        }}>
+        {/* 이미지 미리보기 영역 */}
+        {imageFiles.length > 0 && (
+          <Box sx={{ position: 'relative' }}>
+            <CardMedia
+              component='img'
+              image={imageFiles[0].fileUrl}
+              alt={imageFiles[0].fileName}
+              onClick={handleOpenDialog}
+              sx={{
+                width: '100%',
+                maxHeight: '200px',
+                cursor: 'pointer',
+              }}
+            />
+            {imageFiles.length > 1 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  bgcolor: 'rgba(0, 0, 0, 0.6)',
+                  color: 'white',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}>
+                <ImageIcon fontSize='small' />
+                <Typography variant='body2'>
+                  +{imageFiles.length - 1}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        )}
 
         <CardContent
           onClick={handleOpenDialog}
           style={{
-            maxHeight: "180px", // 원하는 높이 설정
-            overflow: "hidden", // 내용이 넘칠 경우 숨기기
-            textOverflow: "ellipsis", // 생략 기호 표시
-            display: "-webkit-box", // 줄 수 제한을 위한 설정
-            WebkitBoxOrient: "vertical", // 수직 방향 설정
-            cursor: "pointer",
-          }}
-        >
+            maxHeight: '180px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            cursor: 'pointer',
+          }}>
           <MarkdownContent content={memo.content} />
         </CardContent>
 
         <CardActions disableSpacing>
           <Typography
-            variant="body2"
-            color="textSecondary"
-            sx={{ display: "block", ml: 1 }}
-          >
+            variant='body2'
+            color='textSecondary'
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
             {formatDateTime(memo.createdAt)}
+            {memo.files && memo.files.length > 0 && (
+              <Chip
+                size='small'
+                icon={<AttachFileIcon />}
+                label={`${memo.fileCount || memo.files.length} files`}
+                variant='outlined'
+              />
+            )}
           </Typography>
 
           <ExpandMore
             expand={expanded}
             onClick={handleExpandClick}
             aria-expanded={expanded}
-            aria-label="show more"
-          >
+            aria-label='show more'>
             <ExpandMoreIcon />
           </ExpandMore>
         </CardActions>
 
-        <Collapse in={expanded} timeout="auto" unmountOnExit>
+        <Collapse in={expanded} timeout='auto' unmountOnExit>
           <Box sx={{ p: 1 }}>
-            {memo.fileUrl && (
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  mb: 2,
-                }}
-              >
-                {isImageFile(memo.fileName || "") ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <ImageIcon fontSize="small" color="primary" />
-                    <Link
-                      href={memo.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {memo.fileName}
-                    </Link>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <AttachFileIcon fontSize="small" />
-                    <Link
-                      href={memo.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {memo.fileName}
-                    </Link>
-                  </Box>
-                )}
+            {/* 첨부 파일 목록 */}
+            {memo.files && memo.files.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                  Attachments ({memo.fileCount || memo.files.length})
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                  }}>
+                  {memo.files.map((file, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1,
+                        bgcolor: 'grey.50',
+                        borderRadius: 1,
+                      }}>
+                      {isImageFile(file.fileName) ? (
+                        <>
+                          <ImageIcon fontSize='small' color='primary' />
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              flex: 1,
+                            }}>
+                            <Link
+                              href={file.fileUrl}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              sx={{
+                                flex: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}>
+                              {file.fileName}
+                            </Link>
+                            <IconButton
+                              size='small'
+                              onClick={() => handlePreviewImage(file.fileUrl)}
+                              sx={{ ml: 'auto' }}>
+                              <VisibilityIcon fontSize='small' />
+                            </IconButton>
+                          </Box>
+                        </>
+                      ) : (
+                        <>
+                          <AttachFileIcon fontSize='small' />
+                          <Link
+                            href={file.fileUrl}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            sx={{
+                              flex: 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                            {file.fileName}
+                          </Link>
+                        </>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             )}
 
+            {/* 수정/삭제 버튼 */}
             <Box
               sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: 1,
-              }}
-            >
+              }}>
               <Button
                 onClick={() => onEdit(memo)}
-                variant="outlined"
-                color="warning"
-                sx={{ flex: 1 }}
-              >
+                variant='outlined'
+                color='warning'
+                sx={{ flex: 1 }}>
                 Modify
               </Button>
               <Button
                 onClick={() => onDelete(memo.id, memo.createdAt)}
-                variant="outlined"
-                color="error"
-                sx={{ flex: 1 }}
-              >
+                variant='outlined'
+                color='error'
+                sx={{ flex: 1 }}>
                 Delete
               </Button>
             </Box>
           </Box>
         </Collapse>
+
+        {/* 이미지 미리보기 다이얼로그 */}
+        <Dialog
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          maxWidth='md'
+          fullWidth>
+          <DialogContent sx={{ p: 0 }}>
+            {previewImage && (
+              <img
+                src={previewImage}
+                alt='Preview'
+                style={{ width: '100%', height: 'auto' }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </Card>
 
       {/* 확대 모달 Dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
-        maxWidth="lg"
-        fullWidth
-      >
+        maxWidth='lg'
+        fullWidth>
         <DialogTitle>
-          <Typography variant="body2" color="textSecondary">
+          <Typography variant='body2' color='textSecondary'>
             {formatDateTime(memo.createdAt)}
           </Typography>
         </DialogTitle>
         <IconButton
-          aria-label="close"
+          aria-label='close'
           onClick={handleCloseDialog}
           sx={(theme) => ({
-            position: "absolute",
+            position: 'absolute',
             right: 8,
             top: 8,
             color: theme.palette.grey[500],
-          })}
-        >
+          })}>
           <CloseIcon />
         </IconButton>
 
         <DialogContent dividers>
-          {memo.fileUrl && isImageFile(memo.fileName || "") && (
-            <img
-              src={memo.fileUrl}
-              alt={memo.fileName || "image"}
-              style={{
-                width: "100%",
-                height: "auto",
-                borderRadius: "8px",
-                marginBottom: "16px",
-              }}
-            />
-          )}
+          {/* 이미지 파일들 먼저 표시 */}
+          {memo.files &&
+            memo.files.filter((file) => isImageFile(file.fileName)).length >
+              0 && (
+              <Box sx={{ mb: 3 }}>
+                {memo.files
+                  .filter((file) => isImageFile(file.fileName))
+                  .map((file, index) => (
+                    <img
+                      key={index}
+                      src={file.fileUrl}
+                      alt={file.fileName}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                      }}
+                    />
+                  ))}
+              </Box>
+            )}
 
           <MarkdownContent content={memo.content} />
 
-          {memo.fileUrl && (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Divider textAlign="center" sx={{ mt: 2, mb: 2 }}>
-                첨부 파일
+          {/* 첨부 파일 목록 */}
+          {memo.files && memo.files.length > 0 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Divider textAlign='center' sx={{ mt: 2, mb: 2 }}>
+                첨부 파일 ({memo.fileCount || memo.files.length})
               </Divider>
 
-              {isImageFile(memo.fileName || "") ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <ImageIcon fontSize="small" color="primary" />
-                  <Link
-                    href={memo.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {memo.fileName}
-                  </Link>
-                </Box>
-              ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AttachFileIcon fontSize="small" />
-                  <Link
-                    href={memo.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {memo.fileName}
-                  </Link>
-                </Box>
-              )}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {memo.files.map((file, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      p: 1,
+                      bgcolor: 'grey.50',
+                      borderRadius: 1,
+                    }}>
+                    {isImageFile(file.fileName) ? (
+                      <>
+                        <ImageIcon fontSize='small' color='primary' />
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flex: 1,
+                          }}>
+                          <Link
+                            href={file.fileUrl}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            sx={{
+                              flex: 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                            {file.fileName}
+                          </Link>
+                          <IconButton
+                            size='small'
+                            onClick={() => handlePreviewImage(file.fileUrl)}
+                            sx={{ ml: 'auto' }}>
+                            <VisibilityIcon fontSize='small' />
+                          </IconButton>
+                        </Box>
+                      </>
+                    ) : (
+                      <>
+                        <AttachFileIcon fontSize='small' />
+                        <Link
+                          href={file.fileUrl}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          sx={{
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                          {file.fileName}
+                        </Link>
+                      </>
+                    )}
+                  </Box>
+                ))}
+              </Box>
             </Box>
           )}
         </DialogContent>
 
         <DialogActions>
-          <Typography variant="caption" color="textSecondary" sx={{ ml: 1 }}>
+          <Typography variant='caption' color='textSecondary' sx={{ ml: 1 }}>
             {formatDateTime(memo.updatedAt)}
           </Typography>
           <Button
-            variant="outlined"
-            color="warning"
+            variant='outlined'
+            color='warning'
             onClick={() => {
               onEdit(memo);
               handleCloseDialog();
-            }}
-          >
+            }}>
             Modify
           </Button>
           <Button
-            variant="outlined"
-            color="error"
+            variant='outlined'
+            color='error'
             onClick={() => {
               onDelete(memo.id, memo.createdAt);
               handleCloseDialog();
-            }}
-          >
+            }}>
             Delete
           </Button>
         </DialogActions>
+
+        {/* 이미지 미리보기 다이얼로그 */}
+        <Dialog
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          maxWidth='md'
+          fullWidth>
+          <DialogContent sx={{ p: 0 }}>
+            {previewImage && (
+              <img
+                src={previewImage}
+                alt='Preview'
+                style={{ width: '100%', height: 'auto' }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </Dialog>
     </>
   );
