@@ -193,15 +193,17 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
               flexWrap: 'wrap',
               mt: 1,
             }}>
-            {memo?.summary?.keywords?.map((keyword, index) => (
-              <Chip
-                key={index}
-                label={keyword}
-                size='small'
-                variant='outlined'
-                color='secondary'
-              />
-            ))}
+            {memo?.summary?.keywords
+              ?.filter((keyword) => keyword?.trim() !== '')
+              .map((keyword, index) => (
+                <Chip
+                  key={index}
+                  label={keyword}
+                  size='small'
+                  variant='outlined'
+                  color='secondary'
+                />
+              ))}
           </Stack>
         </CardContent>
 
