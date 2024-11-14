@@ -31,13 +31,14 @@ export async function GET(request: NextRequest & { params: { id: string } }) {
     // Content-Type 설정
     const contentType = response.ContentType || 'application/octet-stream';
 
-    // 이미지 데이터를 직접 반환
-    return new NextResponse(body, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': 'inline', // 이미지가 브라우저에 바로 표시되도록 설정
-      },
-    });
+    // 캐시 제어 헤더 추가
+    const headers = {
+      'Content-Type': contentType,
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'public, max-age=86400, immutable',
+    };
+
+    return new NextResponse(body, { headers });
   } catch (error) {
     console.error('Error during file download:', error);
     return NextResponse.json(

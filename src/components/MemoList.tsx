@@ -144,7 +144,7 @@ const MemoList: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <MemoForm mode='create' onSubmit={handleCreate} />
 
-      <Masonry columns={{ sm: 1, lg: 2 }} spacing={2}>
+      <Masonry columns={{ sm: 1, lg: 2 }} spacing={2} sx={{ margin: 0 }}>
         {memos.map((memo, index) => (
           <MemoCard
             key={memo.id}
