@@ -8,13 +8,13 @@ import {
   deleteMemo,
   updateMemo,
   resetMemos,
+  createMemo,
 } from '@/store/memoSlice';
 import { Box, LinearProgress, Alert } from '@mui/material';
-import Grid from '@mui/material/Grid2';
 import Masonry from '@mui/lab/Masonry';
-import EditDialog from './EditDialog';
 import { Memo } from '@/types/memo';
 import MemoCard from './MemoCard';
+import MemoForm from './MemoForm';
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -30,10 +30,6 @@ const MemoList: React.FC = () => {
       dispatch(fetchMemos());
     }
   }, [dispatch, loading, hasMore]);
-
-  const handleSetEditingMemo = useCallback((memo: Memo) => {
-    setEditingMemo(memo);
-  }, []);
 
   // 초기 로딩
   useEffect(() => {
@@ -69,11 +65,8 @@ const MemoList: React.FC = () => {
       const formData = new FormData();
       formData.append('content', content);
       formData.append('createdAt', editingMemo.createdAt);
-
-      // 삭제할 파일 URL 목록 추가
       formData.append('deletedFileUrls', JSON.stringify(deletedFileUrls));
 
-      // 새 파일들 추가
       newFiles.forEach((file, index) => {
         formData.append(`files[${index}]`, file);
       });
@@ -97,13 +90,32 @@ const MemoList: React.FC = () => {
     [dispatch, editingMemo]
   );
 
+  const handleCreate = useCallback(
+    async (content: string, newFiles: File[], _: string[]) => {
+      const formData = new FormData();
+      formData.append('content', content);
+      newFiles.forEach((file, index) => {
+        formData.append(`files[${index}]`, file);
+      });
+
+      try {
+        await dispatch(createMemo(formData)).unwrap();
+        // 목록 새로고침
+        dispatch(resetMemos());
+        dispatch(fetchMemos());
+      } catch (error) {
+        console.error('Failed to create memo:', error);
+        throw error; // MemoForm의 catch 블록에서 처리하도록 에러를 전파
+      }
+    },
+    [dispatch]
+  );
+
   const handleDelete = useCallback(
     async (id: string, createdAt: string) => {
       if (window.confirm('정말 이 메모를 삭제하시겠습니까?')) {
         try {
           await dispatch(deleteMemo({ id, createdAt })).unwrap();
-
-          // Redux 상태에서 메모 제거
           dispatch({
             type: 'memos/removeMemoFromState',
             payload: id,
@@ -130,6 +142,8 @@ const MemoList: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <MemoForm mode='create' onSubmit={handleCreate} />
+
       <Masonry columns={{ sm: 1, lg: 2 }} spacing={2}>
         {memos.map((memo, index) => (
           <MemoCard
@@ -149,12 +163,15 @@ const MemoList: React.FC = () => {
         </Box>
       )}
 
-      <EditDialog
-        open={Boolean(editingMemo)}
-        memo={editingMemo}
-        onClose={() => setEditingMemo(null)}
-        onSave={handleEdit}
-      />
+      {editingMemo && (
+        <MemoForm
+          mode='edit'
+          memo={editingMemo}
+          isDialog
+          onClose={() => setEditingMemo(null)}
+          onSubmit={handleEdit}
+        />
+      )}
     </Box>
   );
 };

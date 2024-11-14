@@ -108,6 +108,33 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
     setPreviewOpen(true);
   };
 
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(
+        `/api/download?fileUrl=${encodeURIComponent(
+          fileUrl
+        )}&fileName=${encodeURIComponent(fileName)}`,
+        {
+          method: 'GET',
+        }
+      );
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // 에러 처리
+      alert('다운로드가 실패했습니다.');
+    }
+  };
+
   const imageFiles =
     memo.files?.filter((file) => isImageFile(file.fileName)) || [];
 
@@ -412,6 +439,17 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                             }}>
                             {file.fileName}
                           </Link>
+                          <Box sx={{ mt: 1, maxWidth: '50px' }}>
+                            <img
+                              src={file.fileUrl}
+                              alt={file.fileName}
+                              style={{
+                                width: '100%',
+                                height: 'auto',
+                                borderRadius: '4px',
+                              }}
+                            />
+                          </Box>
                           <IconButton
                             size='small'
                             onClick={() => handlePreviewImage(file.fileUrl)}
@@ -437,6 +475,16 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                         </Link>
                       </>
                     )}
+
+                    <IconButton
+                      size='small'
+                      onClick={async (e) => {
+                        e.stopPropagation(); // 이벤트 버블링 방지
+                        await handleDownload(file.fileUrl, file.fileName);
+                      }}
+                      sx={{ ml: 'auto' }}>
+                      <DownloadIcon fontSize='small' />
+                    </IconButton>
                   </Box>
                 ))}
               </Box>
