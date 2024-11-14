@@ -5,6 +5,12 @@ import { Providers } from '@/store/provider';
 export const metadata: Metadata = {
   title: 'Next Memo',
   description: 'Next Memo Application',
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
