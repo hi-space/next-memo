@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { s3Client } from '@/lib/s3';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function GET(request: NextRequest & { params: { id: string } }) {
   try {
-    const { id } = await context.params;
+    const { id } = request.params;
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });

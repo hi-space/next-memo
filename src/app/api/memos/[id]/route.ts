@@ -81,12 +81,9 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
-    const { id } = await context.params;
+    const { id } = request.params;
     const formData = await request.formData();
     let content = formData.get('content') as string;
     const createdAt = formData.get('createdAt') as string;
