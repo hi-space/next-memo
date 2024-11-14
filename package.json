@@ -9,10 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.691.0",
     "@aws-sdk/client-dynamodb": "^3.691.0",
     "@aws-sdk/client-s3": "^3.687.0",
     "@aws-sdk/lib-dynamodb": "^3.691.0",
     "@aws-sdk/s3-request-presigner": "^3.687.0",
+    "@aws-sdk/types": "^3.686.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@langchain/community": "^0.3.14",

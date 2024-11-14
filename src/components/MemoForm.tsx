@@ -376,7 +376,10 @@ const MemoForm: React.FC<MemoFormProps> = ({
 
         <DialogActions>
           <Button onClick={handleClose}>취소</Button>
-          <Button onClick={() => handleSubmit()} variant='contained'>
+          <Button
+            onClick={() => handleSubmit()}
+            variant='contained'
+            color='primary'>
             저장
           </Button>
         </DialogActions>

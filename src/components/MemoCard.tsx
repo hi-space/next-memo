@@ -134,6 +134,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
             boxShadow: 6,
           },
           borderRadius: '10px',
+          backgroundColor: '#FAFAF9',
         }}>
         {/* 이미지 미리보기 영역 */}
         {imageFiles.length > 0 && (
@@ -198,10 +199,10 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                 label={keyword}
                 size='small'
                 variant='outlined'
+                color='secondary'
               />
             ))}
           </Stack>
-          {/* <MarkdownContent content={memo.content} /> */}
         </CardContent>
 
         <CardActions disableSpacing>
@@ -215,6 +216,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                 icon={<AttachFileIcon />}
                 label={`${memo.fileCount || memo.files.length} files`}
                 variant='outlined'
+                color='secondary'
               />
             )}
           </Box>
@@ -230,14 +232,23 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
 
         <Collapse in={expanded} timeout='auto' unmountOnExit>
           <Box sx={{ p: 1 }}>
-            <MarkdownContent content={memo.content} />
+            <Box
+              sx={{
+                mb: 2,
+                p: 2,
+                backgroundColor: 'white',
+                borderRadius: '4px',
+                border: '1px solid #e0e0e0',
+              }}>
+              <MarkdownContent content={memo.content} />
+            </Box>
 
             {/* 첨부 파일 목록 */}
             {memo.files && memo.files.length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                  Attachments ({memo.fileCount || memo.files.length})
-                </Typography>
+              <Box>
+                <Divider textAlign='center' sx={{ mt: 2, mb: 2 }}>
+                  첨부 파일 ({memo.fileCount || memo.files.length})
+                </Divider>
                 <Box
                   sx={{
                     display: 'flex',
@@ -245,6 +256,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                     gap: 1,
                     maxHeight: '200px',
                     overflowY: 'auto',
+                    mb: 2,
                   }}>
                   {memo.files.map((file, index) => (
                     <Box
@@ -254,8 +266,9 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                         alignItems: 'center',
                         gap: 1,
                         p: 1,
-                        bgcolor: 'grey.50',
-                        borderRadius: 1,
+                        bgcolor: 'white',
+                        borderRadius: '4px',
+                        border: '1px solid #e0e0e0',
                       }}>
                       {isImageFile(file.fileName) ? (
                         <>
@@ -387,7 +400,12 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                 첨부 파일 ({memo.fileCount || memo.files.length})
               </Divider>
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                }}>
                 {memo.files.map((file, index) => (
                   <Box
                     key={index}

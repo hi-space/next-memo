@@ -7,8 +7,8 @@ import { Memo } from '@/types/memo';
 
 // Bedrock 모델 설정
 export const llm = new BedrockChat({
-  model: 'anthropic.claude-3-5-sonnet-20240620-v1:0',
-  region: process.env.AWS_BEDROCK_REGION,
+  model: 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  region: process.env.AWS_BEDROCK_REGION ?? 'us-east-1',
 });
 
 export async function generateSummary(memo: Memo) {
@@ -37,6 +37,8 @@ export async function generateSummary(memo: Memo) {
     } catch (parseError) {
       throw new Error('Failed to parse result content as JSON');
     }
+
+    console.log(summaryResult);
 
     // DynamoDB 업데이트 명령 실행
     await docClient.send(
