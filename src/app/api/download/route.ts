@@ -1,7 +1,8 @@
 // src/app/api/memos/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { s3Client, generatePresignedUrl } from '@/lib/s3';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { v4 as uuidv4 } from 'uuid';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export async function GET(request: Request) {
   try {
@@ -48,6 +49,58 @@ export async function GET(request: Request) {
     console.error('Download error:', error);
     return NextResponse.json(
       { error: 'Failed to download file' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({ error: '파일이 없습니다.' }, { status: 400 });
+    }
+
+    const fileName = file.name;
+    const id = uuidv4();
+    const fileKey = `uploads/${id}-${fileName}`;
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET!,
+          Key: fileKey,
+          Body: buffer,
+          ContentType: file.type,
+        })
+      );
+
+      const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          fileName,
+          fileUrl,
+          fileType: file.type,
+        },
+      });
+    } catch (error) {
+      console.error(`파일 업로드 실패: ${fileName}`, error);
+      return NextResponse.json(
+        { error: '파일 업로드에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('파일 업로드 실패:', error);
+    return NextResponse.json(
+      { error: '파일 업로드에 실패했습니다.' },
       { status: 500 }
     );
   }

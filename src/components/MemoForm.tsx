@@ -67,68 +67,48 @@ const MemoForm: React.FC<MemoFormProps> = ({
   }, [mode, memo]);
 
   useEffect(() => {
+    const processContent = () => {
+      files.forEach((file) => {
+        if (isImageFile(file.name)) {
+          if (!content.includes(`![${file.name}]`)) {
+            const url = previewUrls[file.name];
+            if (url) {
+              setContent((prev) => `${prev}\n![${file.name}](${url})\n`);
+            }
+          }
+        } else if (!content.includes(`[${file.name}]`)) {
+          setContent(
+            (prev) => `${prev}\n[${file.name}](첨부파일: ${file.name})\n`
+          );
+        }
+      });
+    };
+
+    processContent();
+  }, [files, previewUrls]);
+
+  // URL 생성을 처리하는 별도의 useEffect
+  useEffect(() => {
     const newPreviewUrls: { [key: string]: string } = {};
+
     files.forEach((file) => {
       if (isImageFile(file.name) && !previewUrls[file.name]) {
         const url = URL.createObjectURL(file);
         newPreviewUrls[file.name] = url;
-        if (!content.includes(`![${file.name}]`)) {
-          setContent((prev) => `${prev}\n![${file.name}](${url})\n`);
-        }
-      } else if (
-        !isImageFile(file.name) &&
-        !content.includes(`[${file.name}]`)
-      ) {
-        setContent(
-          (prev) => `${prev}\n[${file.name}](첨부파일: ${file.name})\n`
-        );
       }
     });
 
-    setPreviewUrls((prev) => ({ ...prev, ...newPreviewUrls }));
+    if (Object.keys(newPreviewUrls).length > 0) {
+      setPreviewUrls((prev) => ({ ...prev, ...newPreviewUrls }));
+    }
 
+    // Cleanup function
     return () => {
       Object.values(newPreviewUrls).forEach(URL.revokeObjectURL);
     };
-  }, [files, content]);
+  }, [files]); // files만 의존성으로 사용
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles((prev) => [...prev, ...acceptedFiles]);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
-  const handleClose = () => {
-    setContent('');
-    setFiles([]);
-    setPreviewUrls({});
-    setDeletedFileUrls([]);
-    onClose?.();
-  };
-
-  const handleDeleteExistingFile = (fileUrl: string) => {
-    setDeletedFileUrls((prev) => [...prev, fileUrl]);
-
-    const fileToDelete = existingFiles.find((f) => f.fileUrl === fileUrl);
-    if (fileToDelete) {
-      const fileName = fileToDelete.fileName;
-      let newContent = content;
-
-      if (isImageFile(fileName)) {
-        newContent = newContent.replace(
-          new RegExp(`!\\[${fileName}\\]\\(${fileUrl}\\)\n?`, 'g'),
-          ''
-        );
-      } else {
-        newContent = newContent.replace(
-          new RegExp(`\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
-          ''
-        );
-      }
-      setContent(newContent);
-    }
-  };
-
+  // 파일 삭제 처리 함수
   const handleDeleteNewFile = (fileName: string) => {
     setFiles((prev) => prev.filter((f) => f.name !== fileName));
 
@@ -154,6 +134,43 @@ const MemoForm: React.FC<MemoFormProps> = ({
         return newUrls;
       });
     }
+  };
+
+  const handleDeleteExistingFile = (fileUrl: string) => {
+    setDeletedFileUrls((prev) => [...prev, fileUrl]);
+
+    const fileToDelete = existingFiles.find((f) => f.fileUrl === fileUrl);
+    if (fileToDelete) {
+      const fileName = fileToDelete.fileName;
+      let newContent = content;
+
+      if (isImageFile(fileName)) {
+        newContent = newContent.replace(
+          new RegExp(`!\\[${fileName}\\]\\(${fileUrl}\\)\n?`, 'g'),
+          ''
+        );
+      } else {
+        newContent = newContent.replace(
+          new RegExp(`\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
+          ''
+        );
+      }
+      setContent(newContent);
+    }
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles((prev) => [...prev, ...acceptedFiles]);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+
+  const handleClose = () => {
+    setContent('');
+    setFiles([]);
+    setPreviewUrls({});
+    setDeletedFileUrls([]);
+    onClose?.();
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -348,6 +365,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
     return (
       <Dialog open={true} onClose={handleClose} maxWidth='lg' fullWidth>
         <DialogTitle>
+          {console.log(memo)}
           {mode === 'create' ? '새 메모' : '메모 수정'}
           <IconButton
             aria-label='close'

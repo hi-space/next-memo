@@ -1,7 +1,7 @@
 // src/lib/s3.ts
-import { S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 export const s3Client = new S3Client({
   // credentials: {
@@ -19,4 +19,10 @@ export const generatePresignedUrl = async (key: string) => {
 
   // URL이 1시간 동안 유효
   return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+};
+
+export const generateCdnUrl = (key: string) => {
+  const cloudFrontUrl = process.env.AWS_CLOUDFRONT_URL!;
+  // CloudFront URL로 직접 접근
+  return `${cloudFrontUrl}/${key}`;
 };

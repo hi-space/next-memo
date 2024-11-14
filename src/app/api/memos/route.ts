@@ -4,7 +4,7 @@ import { PutCommand, ScanCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '@/lib/dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { s3Client, generatePresignedUrl } from '@/lib/s3';
+import { s3Client, generateCdnUrl } from '@/lib/s3';
 import { FileInfo, Memo } from '@/types/memo';
 
 export async function POST(request: NextRequest) {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
                 const fileKey = file.fileUrl.split('.com/')[1];
                 return {
                   ...file,
-                  fileUrl: await generatePresignedUrl(fileKey),
+                  fileUrl: generateCdnUrl(fileKey),
                 };
               }
               return file;
