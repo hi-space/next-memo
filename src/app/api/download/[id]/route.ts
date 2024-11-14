@@ -4,7 +4,8 @@ import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 export async function GET(request: NextRequest & { params: { id: string } }) {
   try {
-    const { id } = request.params;
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop();
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });

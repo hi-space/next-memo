@@ -83,7 +83,8 @@ export async function DELETE(
 
 export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
-    const { id } = request.params;
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop();
     const formData = await request.formData();
     let content = formData.get('content') as string;
     const createdAt = formData.get('createdAt') as string;
