@@ -12,6 +12,7 @@ import { generateSummary } from '@/lib/bedrock';
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
+    const title = formData.get('title') as string;
     let content = formData.get('content') as string;
     const id = uuidv4();
     const timestamp = new Date().toISOString();
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
     const memo: Memo = {
       id,
       type: 'MEMO',
+      title,
       content,
       files, // 파일 정보 배열 저장
       fileCount: files.length, // 파일 개수 저장
@@ -88,17 +90,7 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    generateSummary(memo).catch((error) =>
-      console.error('요약 생성 실패:', error)
-    );
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        id,
-        filesUploaded: files.length,
-      },
-    });
+    return NextResponse.json(memo);
   } catch (error) {
     console.error('메모 작성 실패:', error);
     return NextResponse.json(

@@ -12,6 +12,7 @@ import {
   Box,
   Typography,
   Paper,
+  TextField,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -31,6 +32,7 @@ interface MemoFormProps {
   isDialog?: boolean;
   onClose?: () => void;
   onSubmit: (
+    title: string,
     content: string,
     newFiles: File[],
     deletedFileUrls: string[]
@@ -44,6 +46,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<{ [key: string]: string }>({});
@@ -53,8 +56,10 @@ const MemoForm: React.FC<MemoFormProps> = ({
   useEffect(() => {
     if (mode === 'edit' && memo) {
       setContent(memo.content);
+      setTitle(memo.title || '');
     } else {
       setContent('');
+      setTitle('');
     }
     setFiles([]);
     setPreviewUrls({});
@@ -64,6 +69,8 @@ const MemoForm: React.FC<MemoFormProps> = ({
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles((prev) => [...prev, ...acceptedFiles]);
   }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   // 컨텐트 내용 update
   useEffect(() => {
@@ -155,8 +162,6 @@ const MemoForm: React.FC<MemoFormProps> = ({
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
   const handleClose = () => {
     setContent('');
     setFiles([]);
@@ -169,10 +174,11 @@ const MemoForm: React.FC<MemoFormProps> = ({
     e?.preventDefault();
     try {
       // 부모 컴포넌트에서 전달받은 onSubmit 함수 호출
-      await onSubmit(content, files, deletedFileUrls);
+      await onSubmit(title, content, files, deletedFileUrls);
 
       // 생성 모드일 때만 폼 초기화
       if (mode === 'create') {
+        setTitle('');
         setContent('');
         setFiles([]);
         setPreviewUrls({});
@@ -197,6 +203,15 @@ const MemoForm: React.FC<MemoFormProps> = ({
           </Box>
         </Typography>
       )}
+
+      <TextField
+        label='Title'
+        variant='outlined'
+        color='primary'
+        size='small'
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
 
       <MarkdownEditor
         value={content}

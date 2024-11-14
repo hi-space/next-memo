@@ -59,10 +59,16 @@ const MemoList: React.FC = () => {
   );
 
   const handleEdit = useCallback(
-    async (content: string, newFiles: File[], deletedFileUrls: string[]) => {
+    async (
+      title: string,
+      content: string,
+      newFiles: File[],
+      deletedFileUrls: string[]
+    ) => {
       if (!editingMemo) return;
 
       const formData = new FormData();
+      formData.append('title', title);
       formData.append('content', content);
       formData.append('createdAt', editingMemo.createdAt);
       formData.append('deletedFileUrls', JSON.stringify(deletedFileUrls));
@@ -91,15 +97,18 @@ const MemoList: React.FC = () => {
   );
 
   const handleCreate = useCallback(
-    async (content: string, newFiles: File[], _: string[]) => {
+    async (title: string, content: string, newFiles: File[], _: string[]) => {
       const formData = new FormData();
+      formData.append('title', title);
       formData.append('content', content);
       newFiles.forEach((file, index) => {
         formData.append(`files[${index}]`, file);
       });
 
       try {
-        await dispatch(createMemo(formData)).unwrap();
+        const createdMemo = await dispatch(createMemo(formData)).unwrap();
+        handleGenerateSummary(createdMemo);
+
         // 목록 새로고침
         dispatch(resetMemos());
         dispatch(fetchMemos());
@@ -110,6 +119,37 @@ const MemoList: React.FC = () => {
     },
     [dispatch]
   );
+
+  const handleGenerateSummary = async (memo: Memo) => {
+    try {
+      const response = await fetch(`/api/summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(memo),
+      });
+
+      if (!response.ok) {
+        console.error('API response error:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+      const updatedMemo = {
+        ...memo,
+        title: data.title || memo.title,
+        tags: data.tags || memo.tags,
+        summary: data.summary || memo.summary,
+      };
+
+      console.log(updatedMemo);
+
+      dispatch({ type: 'memos/updateMemoInState', payload: updatedMemo });
+    } catch (error) {
+      console.error('Generate failed:', error);
+    }
+  };
 
   const handleDelete = useCallback(
     async (id: string, createdAt: string) => {
@@ -124,6 +164,16 @@ const MemoList: React.FC = () => {
           console.error('Failed to delete memo:', error);
         }
       }
+    },
+    [dispatch]
+  );
+
+  const handleUpdateMemo = useCallback(
+    (updatedMemo: Memo) => {
+      dispatch({
+        type: 'memos/updateMemoInState',
+        payload: updatedMemo,
+      });
     },
     [dispatch]
   );
@@ -151,6 +201,7 @@ const MemoList: React.FC = () => {
             memo={memo}
             onEdit={setEditingMemo}
             onDelete={handleDelete}
+            onUpdate={handleUpdateMemo}
           />
         ))}
       </Masonry>

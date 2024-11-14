@@ -33,7 +33,7 @@ interface MessageContent {
 }
 
 export async function generateSummary(memo: Memo) {
-  const TEMPLATE_SUMMARY = `다음 메모의 내용과 이미지를 나타낼 수 있는 제목을 한 줄 이내로 작성하고, 핵심 키워드도 3개 추출하세요. 내용이 없다면 "무제" 라고 제목을 쓰고 키워드는 빈 칸으로 채우세요.
+  const TEMPLATE_SUMMARY = `다음 메모의 내용과 이미지를 나타낼 수 있는 제목을 한 줄 이내로 작성하고, 핵심 내용을 100자 이내로 요약하세요. 그리고 핵심 내용을 바탕으로 태그도 3개 추출하세요. 내용이 없다면 빈 칸으로 값을 채우세요.
 
     <content>
     {content}
@@ -42,7 +42,8 @@ export async function generateSummary(memo: Memo) {
     응답은 반드시 다음과 같은 JSON 형식으로 출력하세요:
     {{
         "title": "제목",
-        "keywords": ["keyword1", "keyword2", "keyword3"]
+        "summary": "요약 내용",
+        "tags": ["tag1", "tag2", "tag3"]
     }}`;
 
   try {
@@ -127,12 +128,12 @@ export async function generateSummary(memo: Memo) {
           type: memo.type,
           createdAt: memo.createdAt,
         },
-        UpdateExpression: 'SET summary = :summary',
+        UpdateExpression:
+          'SET title = :title, tags = :tags, summary = :summary',
         ExpressionAttributeValues: {
-          ':summary': {
-            title: summaryResult.title,
-            keywords: summaryResult.keywords,
-          },
+          ':title': summaryResult.title,
+          ':tags': summaryResult.tags,
+          ':summary': summaryResult.summary,
         },
       })
     );
@@ -140,6 +141,10 @@ export async function generateSummary(memo: Memo) {
     return summaryResult;
   } catch (error) {
     console.error('요약 생성 중 에러 발생:', error);
-    throw error;
+    return {
+      title: '',
+      summary: '',
+      tags: [],
+    };
   }
 }

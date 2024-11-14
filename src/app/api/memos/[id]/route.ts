@@ -88,6 +88,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     const url = new URL(request.url);
     const id = url.pathname.split('/').pop() || '';
     const formData = await request.formData();
+    const title = formData.get('title') as string;
     let content = formData.get('content') as string;
     const createdAt = formData.get('createdAt') as string;
     const deletedFileUrls = formData.get('deletedFileUrls')
@@ -189,56 +190,43 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     const updatedAt = new Date().toISOString();
 
     // 메모 업데이트
-    await docClient.send(
+    const updatedRes = await docClient.send(
       new UpdateCommand({
         TableName: 'Memos',
         Key: { type: 'MEMO', createdAt },
         UpdateExpression:
-          'SET content = :content, updatedAt = :updatedAt, files = :files, fileCount = :fileCount',
+          'SET title = :title, content = :content, updatedAt = :updatedAt, files = :files, fileCount = :fileCount',
         ExpressionAttributeValues: {
+          ':title': title,
           ':content': content,
           ':updatedAt': updatedAt,
           ':files': updatedFiles,
           ':fileCount': updatedFiles.length,
         },
+        ReturnValues: 'ALL_NEW',
       })
     );
 
-    // 요약 생성
-    const updatedMemo: Memo = {
-      id,
-      type: 'MEMO',
-      content,
-      files: updatedFiles,
-      fileCount: updatedFiles.length,
-      createdAt,
-      updatedAt,
-    };
+    const updatedMemo = updatedRes.Attributes as Memo;
 
-    // 요약 생성을 비동기적으로 실행
-    generateSummary(updatedMemo).catch((summaryError) => {
-      console.error('Summary generation failed:', summaryError);
-    });
+    // 응답에 파일을 CDN URL로 변경
+    if (updatedMemo?.files) {
+      const filesWithPresignedUrls = await Promise.all(
+        updatedMemo.files.map(async (file) => {
+          const fileKey = file.fileUrl.split('.com/')[1];
+          return {
+            ...file,
+            fileUrl: generateCdnUrl(fileKey),
+          };
+        })
+      );
 
-    // 응답에 presigned URL 포함
-    const filesWithPresignedUrls = await Promise.all(
-      updatedFiles.map(async (file) => {
-        const fileKey = file.fileUrl.split('.com/')[1];
-        return {
-          ...file,
-          fileUrl: generateCdnUrl(fileKey),
-        };
-      })
-    );
+      // 업데이트된 메모의 `files` 필드 수정
+      updatedMemo.files = filesWithPresignedUrls;
+      updatedMemo.fileCount = filesWithPresignedUrls.length;
+    }
 
-    return NextResponse.json({
-      id,
-      content,
-      files: filesWithPresignedUrls,
-      fileCount: filesWithPresignedUrls.length,
-      createdAt,
-      updatedAt,
-    });
+    return NextResponse.json(updatedMemo);
   } catch (error) {
     console.error('Memo update failed:', error);
     return NextResponse.json(
