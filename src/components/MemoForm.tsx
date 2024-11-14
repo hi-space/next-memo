@@ -74,10 +74,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
         const url = previewUrls[fileName];
         if (url && !content.includes(`[${fileName}]`)) {
           const prefix = isImageFile(fileName) ? '!' : '';
-          const emoji = isImageFile(fileName) ? '🖼️' : '📎';
-          setContent(
-            (prev) => `${prev}\n${prefix}[${emoji} ${fileName}](${url})\n`
-          );
+          setContent((prev) => `${prev}\n${prefix}[${fileName}](${url})\n`);
         }
       });
     };

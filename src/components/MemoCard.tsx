@@ -183,7 +183,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
             cursor: 'pointer',
           }}>
           <Typography variant='body1'>
-            {memo?.summary?.title ? memo.summary.title : '...'}
+            {memo?.summary?.title ? memo.summary.title : '무제'}
           </Typography>
 
           <Stack
