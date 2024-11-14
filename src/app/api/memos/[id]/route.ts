@@ -7,8 +7,10 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '@/lib/dynamodb';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { s3Client, generatePresignedUrl } from '@/lib/s3';
+import { s3Client, generatePresignedUrl, generateCdnUrl } from '@/lib/s3';
 import { escapeRegExp, isImageFile } from '@/utils/format';
+import { generateSummary } from '@/lib/bedrock';
+import { Memo } from '@/types/memo';
 
 export async function DELETE(
   request: NextRequest & { params: { id: string } }
@@ -84,7 +86,7 @@ export async function DELETE(
 export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
     const url = new URL(request.url);
-    const id = url.pathname.split('/').pop();
+    const id = url.pathname.split('/').pop() || '';
     const formData = await request.formData();
     let content = formData.get('content') as string;
     const createdAt = formData.get('createdAt') as string;
@@ -128,7 +130,6 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
 
       await Promise.all(deletePromises);
 
-      // 삭제된 파일을 제외한 나머지 파일만 유지
       existingFiles = existingFiles.filter(
         (file: { fileUrl: string }) => !deletedFileUrls.includes(file.fileUrl)
       );
@@ -185,6 +186,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
 
     // 기존 파일과 새 파일 병합
     const updatedFiles = [...existingFiles, ...newFiles];
+    const updatedAt = new Date().toISOString();
 
     // 메모 업데이트
     await docClient.send(
@@ -195,12 +197,28 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
           'SET content = :content, updatedAt = :updatedAt, files = :files, fileCount = :fileCount',
         ExpressionAttributeValues: {
           ':content': content,
-          ':updatedAt': new Date().toISOString(),
+          ':updatedAt': updatedAt,
           ':files': updatedFiles,
           ':fileCount': updatedFiles.length,
         },
       })
     );
+
+    // 요약 생성
+    const updatedMemo: Memo = {
+      id,
+      type: 'MEMO',
+      content,
+      files: updatedFiles,
+      fileCount: updatedFiles.length,
+      createdAt,
+      updatedAt,
+    };
+
+    // 요약 생성을 비동기적으로 실행
+    generateSummary(updatedMemo).catch((summaryError) => {
+      console.error('Summary generation failed:', summaryError);
+    });
 
     // 응답에 presigned URL 포함
     const filesWithPresignedUrls = await Promise.all(
@@ -208,7 +226,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
         const fileKey = file.fileUrl.split('.com/')[1];
         return {
           ...file,
-          fileUrl: await generatePresignedUrl(fileKey),
+          fileUrl: generateCdnUrl(fileKey),
         };
       })
     );
@@ -219,7 +237,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
       files: filesWithPresignedUrls,
       fileCount: filesWithPresignedUrls.length,
       createdAt,
-      updatedAt: new Date().toISOString(),
+      updatedAt,
     });
   } catch (error) {
     console.error('Memo update failed:', error);

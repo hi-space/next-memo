@@ -7,6 +7,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, generateCdnUrl } from '@/lib/s3';
 import { FileInfo, Memo } from '@/types/memo';
 import { escapeRegExp, isImageFile } from '@/utils/format';
+import { generateSummary } from '@/lib/bedrock';
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,6 +86,10 @@ export async function POST(request: NextRequest) {
         TableName: 'Memos',
         Item: memo,
       })
+    );
+
+    generateSummary(memo).catch((error) =>
+      console.error('요약 생성 실패:', error)
     );
 
     return NextResponse.json({

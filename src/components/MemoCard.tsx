@@ -17,6 +17,7 @@ import {
   Button,
   Divider,
   Chip,
+  Stack,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { IconButtonProps } from '@mui/material/IconButton';
@@ -86,17 +87,6 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
   const handleExpandClick = () => {
     setExpanded(!expanded);
   };
-
-  // const handleOpenDialog = () => {
-  //   setOpenDialog(true);
-
-  //   // 첫 번째 이미지의 URL로 프리뷰 설정
-  //   const firstImage = memo.files?.find((file) => isImageFile(file.fileName));
-  //   if (firstImage) {
-  //     setPreviewImage(firstImage.fileUrl);
-  //     setPreviewOpen(true);
-  //   }
-  // };
 
   const handlePreviewImage = (imageUrl: string) => {
     setPreviewImage(imageUrl);
@@ -184,14 +174,34 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         <CardContent
           onClick={handleOpenDialog}
           style={{
-            maxHeight: '180px',
+            // maxHeight: '50px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             display: '-webkit-box',
             WebkitBoxOrient: 'vertical',
             cursor: 'pointer',
           }}>
-          <MarkdownContent content={memo.content} />
+          <Typography variant='body1'>
+            {memo?.summary?.title ? memo.summary.title : '...'}
+          </Typography>
+
+          <Stack
+            direction='row'
+            spacing={1}
+            sx={{
+              flexWrap: 'wrap',
+              mt: 1,
+            }}>
+            {memo?.summary?.keywords?.map((keyword, index) => (
+              <Chip
+                key={index}
+                label={keyword}
+                size='small'
+                variant='outlined'
+              />
+            ))}
+          </Stack>
+          {/* <MarkdownContent content={memo.content} /> */}
         </CardContent>
 
         <CardActions disableSpacing>
@@ -220,6 +230,8 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
 
         <Collapse in={expanded} timeout='auto' unmountOnExit>
           <Box sx={{ p: 1 }}>
+            <MarkdownContent content={memo.content} />
+
             {/* 첨부 파일 목록 */}
             {memo.files && memo.files.length > 0 && (
               <Box sx={{ mb: 2 }}>
@@ -366,28 +378,6 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         </IconButton>
 
         <DialogContent dividers>
-          {/* {memo.files &&
-            memo.files.filter((file) => isImageFile(file.fileName)).length >
-              0 && (
-              <Box sx={{ mb: 3 }}>
-                {memo.files
-                  .filter((file) => isImageFile(file.fileName))
-                  .map((file, index) => (
-                    <img
-                      key={index}
-                      src={file.fileUrl}
-                      alt={file.fileName}
-                      style={{
-                        width: '100%',
-                        height: 'auto',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                      }}
-                    />
-                  ))}
-              </Box>
-            )} */}
-
           <MarkdownContent content={memo.content} />
 
           {/* 첨부 파일 목록 */}
