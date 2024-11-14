@@ -78,7 +78,6 @@ const MemoList: React.FC = () => {
         formData.append(`files[${index}]`, file);
       });
 
-      console.log(formData);
       try {
         const updatedMemo = await dispatch(
           updateMemo({ id: editingMemo.id, formData })

@@ -170,11 +170,10 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         </CardContent>
 
         <CardActions disableSpacing>
-          <Typography
-            variant='body2'
-            color='textSecondary'
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
-            {formatDateTime(memo.createdAt)}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+            <Typography variant='body2' color='textSecondary'>
+              {formatDateTime(memo.createdAt)}
+            </Typography>
             {memo.files && memo.files.length > 0 && (
               <Chip
                 size='small'
@@ -183,7 +182,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                 variant='outlined'
               />
             )}
-          </Typography>
+          </Box>
 
           <ExpandMore
             expand={expanded}

@@ -1,7 +1,8 @@
 // src/components/EditDialog.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useDropzone } from 'react-dropzone';
 import {
   Dialog,
   DialogTitle,
@@ -12,10 +13,13 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import ImageIcon from '@mui/icons-material/Image';
-import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  CloudUpload as CloudUploadIcon,
+  Delete as DeleteIcon,
+  Image as ImageIcon,
+  Close as CloseIcon,
+  AttachFile as AttachFileIcon,
+} from '@mui/icons-material';
 import { Memo } from '@/types/memo';
 import MarkdownEditor from '@/components/MarkdownEditor';
 
@@ -46,6 +50,7 @@ const EditDialog: React.FC<EditDialogProps> = ({
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<{ [key: string]: string }>({});
   const [deletedFileUrls, setDeletedFileUrls] = useState<string[]>([]);
+  const existingFiles = memo?.files || [];
 
   useEffect(() => {
     if (memo) {
@@ -72,6 +77,12 @@ const EditDialog: React.FC<EditDialogProps> = ({
       Object.values(newPreviewUrls).forEach(URL.revokeObjectURL);
     };
   }, [files]);
+
+  const onDrop = useCallback((acceptedFiles: any) => {
+    setFiles((prev) => [...prev, ...acceptedFiles]);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const handleClose = () => {
     setContent('');
@@ -105,9 +116,6 @@ const EditDialog: React.FC<EditDialogProps> = ({
 
   const isFileDeleted = (fileUrl: string) => deletedFileUrls.includes(fileUrl);
 
-  {
-    console.log(memo);
-  }
   return (
     <Dialog open={open} onClose={handleClose} maxWidth='lg' fullWidth>
       <DialogTitle>메모 수정</DialogTitle>
@@ -127,13 +135,42 @@ const EditDialog: React.FC<EditDialogProps> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <MarkdownEditor value={content} onChange={setContent} height='60vh' />
           {/* 파일 업로드 버튼 */}
-          <Button
+          <Box
+            {...getRootProps()}
+            sx={{
+              p: 2,
+              border: '2px dashed',
+              borderColor: isDragActive ? 'primary.main' : 'grey.300',
+              borderRadius: 1,
+              backgroundColor: isDragActive
+                ? 'action.hover'
+                : 'background.paper',
+              cursor: 'pointer',
+              textAlign: 'center',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                borderColor: 'primary.main',
+                backgroundColor: 'action.hover',
+              },
+            }}>
+            <input {...getInputProps()} />
+            <CloudUploadIcon
+              sx={{ fontSize: '2rem', mb: 1, color: 'primary.main' }}
+            />
+            <Typography>
+              {isDragActive
+                ? '파일을 여기에 놓으세요'
+                : '파일을 드래그하여 놓거나 클릭하여 선택하세요'}
+            </Typography>
+          </Box>
+
+          {/* <Button
             variant='outlined'
             component='label'
             startIcon={<AttachFileIcon />}>
             파일 추가
             <input type='file' hidden multiple onChange={handleFileChange} />
-          </Button>
+          </Button> */}
 
           {/* 새로 추가된 파일 목록 */}
           {files.length > 0 && (
@@ -142,7 +179,7 @@ const EditDialog: React.FC<EditDialogProps> = ({
                 새로 추가된 파일 ({files.length})
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {files.map((file, index) => (
+                {files.map((file) => (
                   <Box
                     key={file.name}
                     sx={{
@@ -158,15 +195,15 @@ const EditDialog: React.FC<EditDialogProps> = ({
                     ) : (
                       <AttachFileIcon />
                     )}
-                    <Typography sx={{ flex: 1 }}>{file.name}</Typography>
+                    <Typography sx={{ flex: 1 }}>
+                      {file.name} ({(file.size / 1024).toFixed(1)}KB)
+                    </Typography>
                     <IconButton
                       size='small'
                       onClick={() => handleDeleteNewFile(file.name)}
                       color='error'>
                       <DeleteIcon />
                     </IconButton>
-
-                    {/* 이미지 미리보기 */}
                     {previewUrls[file.name] && (
                       <Box sx={{ mt: 1, maxWidth: '200px' }}>
                         <img
@@ -187,15 +224,21 @@ const EditDialog: React.FC<EditDialogProps> = ({
           )}
 
           {/* 기존 파일 목록 */}
-          {memo?.files && memo?.files.length > 0 && (
+          {existingFiles.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant='subtitle2' gutterBottom>
-                기존 파일 ({memo?.files.length})
+                기존 파일 (
+                {
+                  existingFiles.filter(
+                    (file) => !deletedFileUrls.includes(file.fileUrl)
+                  ).length
+                }
+                )
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {memo?.files.map(
+                {existingFiles.map(
                   (file, index) =>
-                    !isFileDeleted(file.fileUrl) && (
+                    !deletedFileUrls.includes(file.fileUrl) && (
                       <Box
                         key={index}
                         sx={{
@@ -220,8 +263,6 @@ const EditDialog: React.FC<EditDialogProps> = ({
                           color='error'>
                           <DeleteIcon />
                         </IconButton>
-
-                        {/* 기존 이미지 표시 */}
                         {isImageFile(file.fileName) && (
                           <Box sx={{ mt: 1, maxWidth: '200px' }}>
                             <img
