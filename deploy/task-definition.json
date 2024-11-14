@@ -6,28 +6,27 @@
   "memory": "8192",
   "executionRoleArn": "arn:aws:iam::913524902871:role/ecsTaskExecutionRole",
   "taskRoleArn": "arn:aws:iam::913524902871:role/ecsTaskExecutionRole",
-  "containerDefinitions": [
-    {
-      "name": "next-memo",
-      "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/next-memo:latest",
-      "portMappings": [
-        {
-          "containerPort": 3000,
-          "hostPort": 3000,
-          "protocol": "tcp"
-        }
-      ],
-      "environment": [
-        {
-          "name": "AWS_REGION",
-          "value": "ap-northeast-2"
-        },
-        {
-          "name": "AWS_S3_BUCKET",
-          "value": "hispace-memos"
-        }
-      ],
-      "essential": true
-    }
-  ]
+  "containerDefinitions": [{
+    "name": "next-memo",
+    "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/next-memo:latest",
+    "portMappings": [{
+      "containerPort": 3000,
+      "hostPort": 3000,
+      "protocol": "tcp"
+    }],
+    "environment": [{
+        "name": "AWS_REGION",
+        "value": "ap-northeast-2"
+      },
+      {
+        "name": "AWS_S3_BUCKET",
+        "value": "hispace-memos"
+      },
+      {
+        "name": "AWS_CLOUDFRONT_URL",
+        "value": "https://d2lfl693y9vrny.cloudfront.net"
+      }
+    ],
+    "essential": true
+  }]
 }
