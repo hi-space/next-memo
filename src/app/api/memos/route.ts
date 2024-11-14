@@ -6,27 +6,31 @@ import { v4 as uuidv4 } from 'uuid';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, generateCdnUrl } from '@/lib/s3';
 import { FileInfo, Memo } from '@/types/memo';
+import { escapeRegExp, isImageFile } from '@/utils/format';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const content = formData.get('content') as string;
-
+    let content = formData.get('content') as string;
     const id = uuidv4();
     const timestamp = new Date().toISOString();
     const files: FileInfo[] = [];
+    const urlMapping: { [key: string]: string } = {};
 
-    // FormData에서 files로 시작하는 모든 필드 처리
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith('files[') && value instanceof File) {
-        const file = value as File;
+    // 새로운 파일들 처리
+    const fileEntries = Array.from(formData.entries()).filter(([key]) =>
+      key.startsWith('files[')
+    );
 
+    for (const [_, file] of fileEntries) {
+      if (file instanceof File) {
         try {
           const fileName = file.name;
-          const fileKey = `uploads/${id}-${fileName}`;
+          const fileKey = `files/${id}-${fileName}`;
           const arrayBuffer = await file.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
 
+          // S3에 파일 업로드
           await s3Client.send(
             new PutObjectCommand({
               Bucket: process.env.AWS_S3_BUCKET!,
@@ -36,20 +40,36 @@ export async function POST(request: NextRequest) {
             })
           );
 
-          // 파일 정보를 배열에 추가
+          const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+
+          // URL 매핑 생성
+          const markdownPattern = new RegExp(
+            `!?\\[${escapeRegExp(fileName)}\\]\\(blob:[^)]+\\)`,
+            'g'
+          );
+          const markdownReplacement = `${
+            isImageFile(fileName) ? '!' : ''
+          }[${fileName}](/api/download/${id}-${fileName})`;
+          urlMapping[markdownPattern.source] = markdownReplacement;
+
+          // 파일 정보 저장
           files.push({
             fileName: fileName,
-            fileUrl: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+            fileUrl: s3Url,
             fileType: file.type,
           });
         } catch (error) {
           console.error(`파일 업로드 실패: ${file.name}`, error);
-          // 개별 파일 실패는 전체 프로세스를 중단하지 않음
           continue;
         }
       }
     }
 
+    // content 내의 blob URL들을 S3 URL로 치환
+    Object.entries(urlMapping).forEach(([pattern, replacement]) => {
+      const regex = new RegExp(pattern, 'g');
+      content = content.replace(regex, replacement);
+    });
     const memo: Memo = {
       id,
       type: 'MEMO',

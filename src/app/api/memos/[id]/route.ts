@@ -8,6 +8,7 @@ import {
 import { docClient } from '@/lib/dynamodb';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, generatePresignedUrl } from '@/lib/s3';
+import { escapeRegExp, isImageFile } from '@/utils/format';
 
 export async function DELETE(
   request: NextRequest & { params: { id: string } }
@@ -80,13 +81,14 @@ export async function DELETE(
   }
 }
 
-export async function PUT(request: NextRequest & { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const url = request.nextUrl.pathname;
-    const id = url.split('/').pop();
+    const { id } = await context.params;
     const formData = await request.formData();
-    const content = formData.get('content') as string;
-    const type = 'MEMO';
+    let content = formData.get('content') as string;
     const createdAt = formData.get('createdAt') as string;
     const deletedFileUrls = formData.get('deletedFileUrls')
       ? JSON.parse(formData.get('deletedFileUrls') as string)
@@ -99,81 +101,54 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
       );
     }
 
-    // 기존 메모 정보 조회
+    // 기존 메모 조회
     const getMemoResult = await docClient.send(
       new GetCommand({
         TableName: 'Memos',
-        Key: {
-          type,
-          createdAt,
-        },
+        Key: { type: 'MEMO', createdAt },
       })
     );
 
     const existingMemo = getMemoResult.Item;
     if (!existingMemo) {
-      return NextResponse.json(
-        { error: '메모를 찾을 수 없습니다.' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
     }
 
-    // 기존 파일 정보 가져오기
     let existingFiles = existingMemo.files || [];
 
+    // 삭제할 파일 처리
     if (deletedFileUrls.length > 0) {
-      const normalizeUrl = (url: string) => {
-        try {
-          const parts = url.split('uploads/');
-          const encodedPath = parts.length > 1 ? parts[1].split('?')[0] : url;
-          return `uploads/${decodeURIComponent(encodedPath)}`;
-        } catch (error) {
-          console.error('Error decoding URL:', url, error);
-          return url;
-        }
-      };
-
-      // S3에서 파일 삭제
       const deletePromises = deletedFileUrls.map(async (fileUrl: string) => {
-        try {
-          const normalizedKey = normalizeUrl(fileUrl).replace('uploads/', '');
-
-          await s3Client.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.AWS_S3_BUCKET!,
-              Key: normalizedKey,
-            })
-          );
-          console.log('Successfully deleted file from S3:', normalizedKey);
-        } catch (error) {
-          console.error('Failed to delete file from S3:', error);
-          throw error;
-        }
+        const fileKey = decodeURIComponent(fileUrl.split('.com/')[1]);
+        await s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET!,
+            Key: fileKey,
+          })
+        );
       });
 
       await Promise.all(deletePromises);
 
-      // 삭제된 파일을 제외한 나머지 파일들만 유지
-      const filteredFiles = existingFiles.filter(
-        (file: { fileUrl: string }) => {
-          const normalizedExistingUrl = normalizeUrl(file.fileUrl);
-          return !deletedFileUrls
-            .map((url: string) => normalizeUrl(url))
-            .includes(normalizedExistingUrl);
-        }
+      // 삭제된 파일을 제외한 나머지 파일만 유지
+      existingFiles = existingFiles.filter(
+        (file: { fileUrl: string }) => !deletedFileUrls.includes(file.fileUrl)
       );
-
-      existingFiles = filteredFiles;
     }
 
-    // 새 파일들 처리
+    // 새로운 파일 업로드 및 URL 매핑
     const newFiles: { fileName: string; fileUrl: string; fileType: string }[] =
       [];
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith('files[') && value instanceof File) {
-        const file = value as File;
+    const urlMapping: { [key: string]: string } = {};
+
+    const fileEntries = Array.from(formData.entries()).filter(([key]) =>
+      key.startsWith('files[')
+    );
+
+    for (const [_, file] of fileEntries) {
+      if (file instanceof File) {
         const fileName = file.name;
-        const fileKey = `uploads/${id}-${fileName}`;
+        const fileKey = `files/${id}-${fileName}`;
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
@@ -186,25 +161,38 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
           })
         );
 
+        const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+        const markdownPattern = new RegExp(
+          `!?\\[${escapeRegExp(fileName)}\\]\\(blob:[^)]+\\)`,
+          'g'
+        );
+        const markdownReplacement = `${
+          isImageFile(fileName) ? '!' : ''
+        }[${fileName}](/api/download/${id}-${fileName})`;
+        urlMapping[markdownPattern.source] = markdownReplacement;
+
         newFiles.push({
-          fileName: fileName,
-          fileUrl: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+          fileName,
+          fileUrl: s3Url,
           fileType: file.type,
         });
       }
     }
 
-    // 기존 파일과 새 파일을 합침
+    // content 내의 blob URL을 `/api/download/{filename}` 형식으로 교체
+    Object.entries(urlMapping).forEach(([pattern, replacement]) => {
+      const regex = new RegExp(pattern, 'g');
+      content = content.replace(regex, replacement);
+    });
+
+    // 기존 파일과 새 파일 병합
     const updatedFiles = [...existingFiles, ...newFiles];
 
     // 메모 업데이트
     await docClient.send(
       new UpdateCommand({
         TableName: 'Memos',
-        Key: {
-          type,
-          createdAt,
-        },
+        Key: { type: 'MEMO', createdAt },
         UpdateExpression:
           'SET content = :content, updatedAt = :updatedAt, files = :files, fileCount = :fileCount',
         ExpressionAttributeValues: {
@@ -216,7 +204,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
       })
     );
 
-    // 응답을 위해 모든 파일의 URL을 presigned URL로 변환
+    // 응답에 presigned URL 포함
     const filesWithPresignedUrls = await Promise.all(
       updatedFiles.map(async (file) => {
         const fileKey = file.fileUrl.split('.com/')[1];
@@ -227,10 +215,8 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
       })
     );
 
-    // 수정된 메모 데이터 반환 (presigned URL 포함)
     return NextResponse.json({
       id,
-      type,
       content,
       files: filesWithPresignedUrls,
       fileCount: filesWithPresignedUrls.length,
@@ -238,9 +224,9 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error(error);
+    console.error('Memo update failed:', error);
     return NextResponse.json(
-      { error: '메모 수정에 실패했습니다.' },
+      { error: 'Failed to update memo' },
       { status: 500 }
     );
   }

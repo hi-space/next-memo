@@ -33,6 +33,7 @@ import {
 
 import { Memo } from '@/types/memo';
 import { formatDateTime } from '@/utils/dateFormat';
+import { isImageFile } from '@/utils/format';
 
 interface MemoCardProps {
   memo: Memo;
@@ -67,12 +68,6 @@ const ExpandMore = styled((props: ExpandMoreProps) => {
     },
   ],
 }));
-
-const isImageFile = (fileName: string) => {
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  const extension = fileName.split('.').pop()?.toLowerCase() || '';
-  return imageExtensions.includes(extension);
-};
 
 const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
   const [openDialog, setOpenDialog] = useState(false);
@@ -371,8 +366,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         </IconButton>
 
         <DialogContent dividers>
-          {/* 이미지 파일들 먼저 표시 */}
-          {memo.files &&
+          {/* {memo.files &&
             memo.files.filter((file) => isImageFile(file.fileName)).length >
               0 && (
               <Box sx={{ mb: 3 }}>
@@ -392,7 +386,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                     />
                   ))}
               </Box>
-            )}
+            )} */}
 
           <MarkdownContent content={memo.content} />
 
@@ -446,6 +440,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                               style={{
                                 width: '100%',
                                 height: 'auto',
+                                maxHeight: '50px',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                               }}

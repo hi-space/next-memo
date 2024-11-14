@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { Memo } from '@/types/memo';
 import MarkdownEditor from '@/components/MarkdownEditor';
+import { escapeRegExp, isImageFile } from '@/utils/format';
 
 interface MemoFormProps {
   mode: 'create' | 'edit';
@@ -35,12 +36,6 @@ interface MemoFormProps {
     deletedFileUrls: string[]
   ) => Promise<void>;
 }
-
-const isImageFile = (fileName: string) => {
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  const extension = fileName.split('.').pop()?.toLowerCase() || '';
-  return imageExtensions.includes(extension);
-};
 
 const MemoForm: React.FC<MemoFormProps> = ({
   mode,
@@ -66,20 +61,20 @@ const MemoForm: React.FC<MemoFormProps> = ({
     setDeletedFileUrls([]);
   }, [mode, memo]);
 
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles((prev) => [...prev, ...acceptedFiles]);
+  }, []);
+
+  // 컨텐트 내용 update
   useEffect(() => {
     const processContent = () => {
       files.forEach((file) => {
-        if (isImageFile(file.name)) {
-          if (!content.includes(`![${file.name}]`)) {
-            const url = previewUrls[file.name];
-            if (url) {
-              setContent((prev) => `${prev}\n![${file.name}](${url})\n`);
-            }
-          }
-        } else if (!content.includes(`[${file.name}]`)) {
-          setContent(
-            (prev) => `${prev}\n[${file.name}](첨부파일: ${file.name})\n`
-          );
+        const fileName = file.name;
+
+        const url = previewUrls[fileName];
+        if (url && !content.includes(`[${fileName}]`)) {
+          const prefix = isImageFile(fileName) ? '!' : '';
+          setContent((prev) => `${prev}\n${prefix}[${fileName}](${url})\n`);
         }
       });
     };
@@ -92,9 +87,12 @@ const MemoForm: React.FC<MemoFormProps> = ({
     const newPreviewUrls: { [key: string]: string } = {};
 
     files.forEach((file) => {
-      if (isImageFile(file.name) && !previewUrls[file.name]) {
+      const fileName = file.name;
+
+      // 임시 URL 생성
+      if (!previewUrls[fileName]) {
         const url = URL.createObjectURL(file);
-        newPreviewUrls[file.name] = url;
+        newPreviewUrls[fileName] = url;
       }
     });
 
@@ -106,24 +104,18 @@ const MemoForm: React.FC<MemoFormProps> = ({
     return () => {
       Object.values(newPreviewUrls).forEach(URL.revokeObjectURL);
     };
-  }, [files]); // files만 의존성으로 사용
+  }, [files]);
 
   // 파일 삭제 처리 함수
   const handleDeleteNewFile = (fileName: string) => {
     setFiles((prev) => prev.filter((f) => f.name !== fileName));
 
     let newContent = content;
-    if (isImageFile(fileName)) {
-      newContent = newContent.replace(
-        new RegExp(`!\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
-        ''
-      );
-    } else {
-      newContent = newContent.replace(
-        new RegExp(`\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
-        ''
-      );
-    }
+    newContent = newContent.replace(
+      new RegExp(`!?\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
+      ''
+    );
+
     setContent(newContent);
 
     if (previewUrls[fileName]) {
@@ -144,24 +136,24 @@ const MemoForm: React.FC<MemoFormProps> = ({
       const fileName = fileToDelete.fileName;
       let newContent = content;
 
-      if (isImageFile(fileName)) {
-        newContent = newContent.replace(
-          new RegExp(`!\\[${fileName}\\]\\(${fileUrl}\\)\n?`, 'g'),
-          ''
-        );
-      } else {
-        newContent = newContent.replace(
-          new RegExp(`\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
-          ''
-        );
-      }
+      // 파일 이름이 링크의 일부로 포함된 경우를 고려한 정규식
+      const imagePattern = new RegExp(
+        `!\\[${escapeRegExp(fileName)}\\]\\(/api/download/[^)]+\\)\\s*`,
+        'g'
+      );
+      const filePattern = new RegExp(
+        `\\[${escapeRegExp(fileName)}\\]\\(/api/download/[^)]+\\)\\s*`,
+        'g'
+      );
+
+      // 이미지 파일과 일반 파일 링크 모두 제거
+      newContent = newContent
+        .replace(imagePattern, '')
+        .replace(filePattern, '');
+
       setContent(newContent);
     }
   };
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles((prev) => [...prev, ...acceptedFiles]);
-  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
@@ -274,6 +266,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
                       style={{
                         width: '100%',
                         height: 'auto',
+                        maxHeight: '50px',
                         borderRadius: '4px',
                       }}
                     />
@@ -365,7 +358,6 @@ const MemoForm: React.FC<MemoFormProps> = ({
     return (
       <Dialog open={true} onClose={handleClose} maxWidth='lg' fullWidth>
         <DialogTitle>
-          {console.log(memo)}
           {mode === 'create' ? '새 메모' : '메모 수정'}
           <IconButton
             aria-label='close'

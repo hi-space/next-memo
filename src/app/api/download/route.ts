@@ -1,4 +1,4 @@
-// src/app/api/memos/route.ts
+// src/app/api/download/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { s3Client, generatePresignedUrl } from '@/lib/s3';
 import { v4 as uuidv4 } from 'uuid';
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     const fileName = file.name;
     const id = uuidv4();
-    const fileKey = `uploads/${id}-${fileName}`;
+    const fileKey = `files/${id}-${fileName}`;
 
     try {
       const arrayBuffer = await file.arrayBuffer();
