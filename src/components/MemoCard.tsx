@@ -21,11 +21,16 @@ import {
 import { styled } from '@mui/material/styles';
 import { IconButtonProps } from '@mui/material/IconButton';
 import MarkdownContent from '@/components/MarkdownContent';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import ImageIcon from '@mui/icons-material/Image';
-import CloseIcon from '@mui/icons-material/Close';
+
+import {
+  Download as DownloadIcon,
+  Image as ImageIcon,
+  Close as CloseIcon,
+  AttachFile as AttachFileIcon,
+  ExpandMore as ExpandMoreIcon,
+  Visibility as VisibilityIcon,
+} from '@mui/icons-material';
+
 import { Memo } from '@/types/memo';
 import { formatDateTime } from '@/utils/dateFormat';
 

@@ -1,4 +1,3 @@
-// src/components/EditDialog.tsx
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -62,23 +61,27 @@ const EditDialog: React.FC<EditDialogProps> = ({
   }, [memo]);
 
   useEffect(() => {
-    // 새로 추가된 파일들의 미리보기 URL 생성
     const newPreviewUrls: { [key: string]: string } = {};
     files.forEach((file) => {
       if (isImageFile(file.name) && !previewUrls[file.name]) {
-        newPreviewUrls[file.name] = URL.createObjectURL(file);
+      } else if (
+        !isImageFile(file.name) &&
+        !content.includes(`[${file.name}]`)
+      ) {
+        setContent(
+          (prev) => `${prev}\n[${file.name}](첨부파일: ${file.name})\n`
+        );
       }
     });
 
     setPreviewUrls((prev) => ({ ...prev, ...newPreviewUrls }));
 
-    // Cleanup
     return () => {
       Object.values(newPreviewUrls).forEach(URL.revokeObjectURL);
     };
-  }, [files]);
+  }, [files, content]);
 
-  const onDrop = useCallback((acceptedFiles: any) => {
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles((prev) => [...prev, ...acceptedFiles]);
   }, []);
 
@@ -94,10 +97,44 @@ const EditDialog: React.FC<EditDialogProps> = ({
 
   const handleDeleteExistingFile = (fileUrl: string) => {
     setDeletedFileUrls((prev) => [...prev, fileUrl]);
+
+    const fileToDelete = existingFiles.find((f) => f.fileUrl === fileUrl);
+    if (fileToDelete) {
+      const fileName = fileToDelete.fileName;
+      let newContent = content;
+
+      if (isImageFile(fileName)) {
+        newContent = newContent.replace(
+          new RegExp(`!\\[${fileName}\\]\\(${fileUrl}\\)\n?`, 'g'),
+          ''
+        );
+      } else {
+        newContent = newContent.replace(
+          new RegExp(`\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
+          ''
+        );
+      }
+      setContent(newContent);
+    }
   };
 
   const handleDeleteNewFile = (fileName: string) => {
     setFiles((prev) => prev.filter((f) => f.name !== fileName));
+
+    let newContent = content;
+    if (isImageFile(fileName)) {
+      newContent = newContent.replace(
+        new RegExp(`!\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
+        ''
+      );
+    } else {
+      newContent = newContent.replace(
+        new RegExp(`\\[${fileName}\\]\\([^)]+\\)\n?`, 'g'),
+        ''
+      );
+    }
+    setContent(newContent);
+
     if (previewUrls[fileName]) {
       URL.revokeObjectURL(previewUrls[fileName]);
       setPreviewUrls((prev) => {
@@ -108,33 +145,28 @@ const EditDialog: React.FC<EditDialogProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
-    }
-  };
-
-  const isFileDeleted = (fileUrl: string) => deletedFileUrls.includes(fileUrl);
-
   return (
     <Dialog open={open} onClose={handleClose} maxWidth='lg' fullWidth>
-      <DialogTitle>메모 수정</DialogTitle>
-      <IconButton
-        aria-label='close'
-        onClick={handleClose}
-        sx={(theme) => ({
-          position: 'absolute',
-          right: 8,
-          top: 10,
-          color: theme.palette.grey[500],
-        })}>
-        <CloseIcon />
-      </IconButton>
+      <DialogTitle>
+        메모 수정
+        <IconButton
+          aria-label='close'
+          onClick={handleClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: (theme) => theme.palette.grey[500],
+          }}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
 
       <DialogContent dividers>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <MarkdownEditor value={content} onChange={setContent} height='60vh' />
-          {/* 파일 업로드 버튼 */}
+
+          {/* 파일 업로드 영역 */}
           <Box
             {...getRootProps()}
             sx={{
@@ -164,14 +196,6 @@ const EditDialog: React.FC<EditDialogProps> = ({
             </Typography>
           </Box>
 
-          {/* <Button
-            variant='outlined'
-            component='label'
-            startIcon={<AttachFileIcon />}>
-            파일 추가
-            <input type='file' hidden multiple onChange={handleFileChange} />
-          </Button> */}
-
           {/* 새로 추가된 파일 목록 */}
           {files.length > 0 && (
             <Box sx={{ mt: 2 }}>
@@ -198,12 +222,6 @@ const EditDialog: React.FC<EditDialogProps> = ({
                     <Typography sx={{ flex: 1 }}>
                       {file.name} ({(file.size / 1024).toFixed(1)}KB)
                     </Typography>
-                    <IconButton
-                      size='small'
-                      onClick={() => handleDeleteNewFile(file.name)}
-                      color='error'>
-                      <DeleteIcon />
-                    </IconButton>
                     {previewUrls[file.name] && (
                       <Box sx={{ mt: 1, maxWidth: '200px' }}>
                         <img
@@ -217,6 +235,12 @@ const EditDialog: React.FC<EditDialogProps> = ({
                         />
                       </Box>
                     )}
+                    <IconButton
+                      size='small'
+                      onClick={() => handleDeleteNewFile(file.name)}
+                      color='error'>
+                      <DeleteIcon />
+                    </IconButton>
                   </Box>
                 ))}
               </Box>
@@ -257,12 +281,6 @@ const EditDialog: React.FC<EditDialogProps> = ({
                         <Typography sx={{ flex: 1 }}>
                           {file.fileName}
                         </Typography>
-                        <IconButton
-                          size='small'
-                          onClick={() => handleDeleteExistingFile(file.fileUrl)}
-                          color='error'>
-                          <DeleteIcon />
-                        </IconButton>
                         {isImageFile(file.fileName) && (
                           <Box sx={{ mt: 1, maxWidth: '200px' }}>
                             <img
@@ -276,6 +294,12 @@ const EditDialog: React.FC<EditDialogProps> = ({
                             />
                           </Box>
                         )}
+                        <IconButton
+                          size='small'
+                          onClick={() => handleDeleteExistingFile(file.fileUrl)}
+                          color='error'>
+                          <DeleteIcon />
+                        </IconButton>
                       </Box>
                     )
                 )}
@@ -296,4 +320,5 @@ const EditDialog: React.FC<EditDialogProps> = ({
     </Dialog>
   );
 };
+
 export default EditDialog;
