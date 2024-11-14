@@ -4,7 +4,6 @@ import { PromptTemplate } from '@langchain/core/prompts';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '@/lib/dynamodb';
 import { Memo } from '@/types/memo';
-import json from 'json';
 
 // Bedrock 모델 설정
 export const llm = new BedrockChat({
@@ -31,8 +30,6 @@ export async function generateSummary(memo: Memo) {
     const result = await chain.invoke({
       content: memo.content,
     });
-
-    console.log(result);
 
     let summaryResult;
     try {
