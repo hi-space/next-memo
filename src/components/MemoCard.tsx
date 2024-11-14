@@ -180,9 +180,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                   gap: 0.5,
                 }}>
                 <ImageIcon fontSize='small' />
-                <Typography variant='body2'>
-                  +{imageFiles.length - 1}
-                </Typography>
+                <Typography variant='body2'>{imageFiles.length}</Typography>
               </Box>
             )}
           </Box>
@@ -349,7 +347,7 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
         </Dialog>
       </Card>
 
-      {/* 확대 모달 Dialog */}
+      {/* 아이템 상세보기 Dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
@@ -439,7 +437,9 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                             }}>
                             {file.fileName}
                           </Link>
-                          <Box sx={{ mt: 1, maxWidth: '50px' }}>
+                          <Box
+                            sx={{ mt: 1, maxWidth: '50px' }}
+                            onClick={() => handlePreviewImage(file.fileUrl)}>
                             <img
                               src={file.fileUrl}
                               alt={file.fileName}
@@ -447,15 +447,10 @@ const MemoCard = React.memo<MemoCardProps>(({ memo, onEdit, onDelete }) => {
                                 width: '100%',
                                 height: 'auto',
                                 borderRadius: '4px',
+                                cursor: 'pointer',
                               }}
                             />
                           </Box>
-                          <IconButton
-                            size='small'
-                            onClick={() => handlePreviewImage(file.fileUrl)}
-                            sx={{ ml: 'auto' }}>
-                            <VisibilityIcon fontSize='small' />
-                          </IconButton>
                         </Box>
                       </>
                     ) : (
