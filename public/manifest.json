@@ -1,0 +1,14 @@
+{
+  "theme_color": "#1976d2",
+  "background_color": "#F8F8F7",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "name": "next-memo",
+  "short_name": "next-memo",
+  "icons": [{
+    "src": "icon/logo.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }]
+}
