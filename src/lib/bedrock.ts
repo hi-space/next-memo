@@ -72,6 +72,7 @@ export async function generateSummary(memo: Memo) {
     };
 
     let modelId = MODEL_HAIKU;
+    let error;
 
     if (memo.fileCount && memo.files && memo.files.length > 0) {
       try {
@@ -99,7 +100,7 @@ export async function generateSummary(memo: Memo) {
         }
       } catch (error) {
         console.error('Failed to process file:', error);
-        alert(`Failed to process file: ${error}`);
+        error = `Failed to process file: ${error}`;
       }
     }
 
@@ -119,7 +120,7 @@ export async function generateSummary(memo: Memo) {
       summaryResult = JSON.parse(result.content[0].text as string);
     } catch (error) {
       console.error('Failed to generate answer:', error);
-      alert(`Failed to generate answer: ${error}`);
+      error = `Failed to generate answer: ${error}`;
     }
 
     console.log(summaryResult);
@@ -145,12 +146,13 @@ export async function generateSummary(memo: Memo) {
     return summaryResult;
   } catch (error) {
     console.error('요약 생성 중 에러 발생:', error);
-    alert(`요약 생성 중 에러 발생: ${error}`);
+    error = `요약 생성 중 에러 발생: ${error}`;
 
     return {
       title: '',
       summary: '',
       tags: [],
+      error: error,
     };
   }
 }
