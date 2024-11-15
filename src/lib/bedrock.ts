@@ -135,7 +135,7 @@ export async function generateSummary(memo: Memo) {
         UpdateExpression:
           'SET title = :title, tags = :tags, summary = :summary',
         ExpressionAttributeValues: {
-          ':title': summaryResult.title,
+          ':title': memo.title || summaryResult.title,
           ':tags': summaryResult.tags,
           ':summary': summaryResult.summary,
         },
@@ -145,13 +145,12 @@ export async function generateSummary(memo: Memo) {
     return summaryResult;
   } catch (error) {
     console.error('요약 생성 중 에러 발생:', error);
-    error = `요약 생성 중 에러 발생: ${error}`;
 
     return {
       title: '',
       summary: '',
       tags: [],
-      error: error,
+      error: 'Failed to generate summary',
     };
   }
 }
