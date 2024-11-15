@@ -33,6 +33,7 @@ import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import { escapeRegExp, isImageFile } from '@/utils/format';
 import { Priority, priorityEmojis } from '@/types/priority';
 import PriorityBadge from './PriorityBadge';
+import { Emojis } from '@/types/emoji';
 
 interface MemoFormProps {
   mode: 'create' | 'edit';
@@ -69,18 +70,6 @@ const MemoForm: React.FC<MemoFormProps> = ({
   );
   const [priorityAnchorEl, setPriorityAnchorEl] =
     useState<HTMLButtonElement | null>(null);
-  const commonEmojis = [
-    '📝',
-    '📌',
-    '💡',
-    '⭐',
-    '🔍',
-    '📊',
-    '🎯',
-    '✨',
-    '⚡',
-    '🔥',
-  ];
 
   useEffect(() => {
     if (mode === 'edit' && memo) {
@@ -244,11 +233,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
             height: 32,
             fontSize: '1.2rem',
           }}>
-          {prefix || (
-            <EmojiEmotionsIcon
-              sx={{ color: 'text.disabled', fontSize: '1.2rem' }}
-            />
-          )}
+          {prefix || <EmojiEmotionsIcon sx={{ fontSize: '1.2rem' }} />}
         </IconButton>
 
         <Popover
@@ -285,7 +270,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
               }}>
               <em>❌</em>
             </MenuItem>
-            {commonEmojis.map((emoji) => (
+            {Emojis.map((emoji) => (
               <MenuItem
                 key={emoji}
                 onClick={() => {
@@ -315,15 +300,11 @@ const MemoForm: React.FC<MemoFormProps> = ({
         />
 
         <IconButton
-          size='small'
           onClick={(e) => setPriorityAnchorEl(e.currentTarget)}
           sx={{
             p: 0,
-            '&:hover': {
-              backgroundColor: 'transparent',
-            },
           }}>
-          <PriorityBadge priority={priority} size='small' />
+          <PriorityBadge priority={priority} />
         </IconButton>
 
         <Popover
