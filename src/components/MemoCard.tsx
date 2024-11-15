@@ -430,7 +430,8 @@ const MemoCard = React.memo<MemoCardProps>(
           open={openDialog}
           onClose={handleCloseDialog}
           maxWidth='lg'
-          fullWidth>
+          fullWidth
+          disableScrollLock={false}>
           <DialogTitle>
             <Typography variant='body1' color='secondary'>
               {memo.title}
