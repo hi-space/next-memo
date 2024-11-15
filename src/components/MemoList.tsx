@@ -69,6 +69,7 @@ const MemoList: React.FC = () => {
       if (!editingMemo) return;
 
       const formData = new FormData();
+      formData.append('id', editingMemo.id);
       formData.append('title', title);
       formData.append('prefix', prefix || '');
       formData.append('content', content);

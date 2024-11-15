@@ -17,9 +17,8 @@ import { FileInfo, Memo } from '@/types/memo';
 
 export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
-    const url = new URL(request.url);
-    const id = url.pathname.split('/').pop() || '';
     const formData = await request.formData();
+    const id = formData.get('id') as string;
     const title = formData.get('title') as string;
     let content = formData.get('content') as string;
     const prefix = formData.get('prefix') as string;
