@@ -33,7 +33,6 @@ import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import { escapeRegExp, isImageFile } from '@/utils/format';
 import { Priority, priorityEmojis } from '@/types/priority';
 import PriorityBadge from './PriorityBadge';
-import { set } from 'date-fns';
 
 interface MemoFormProps {
   mode: 'create' | 'edit';
