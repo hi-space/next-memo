@@ -19,16 +19,19 @@ const initialState: MemoState = {
 
 export const fetchMemos = createAsyncThunk(
   'memos/fetchMemos',
-  async (_, { getState }) => {
+  async (params: { priority?: number } = {}, { getState }) => {
     const state = getState() as { memos: MemoState };
     const { lastEvaluatedKey } = state.memos;
 
-    const params = new URLSearchParams();
+    const urlParams = new URLSearchParams();
     if (lastEvaluatedKey) {
-      params.append('lastKey', JSON.stringify(lastEvaluatedKey));
+      urlParams.append('lastKey', JSON.stringify(lastEvaluatedKey));
+    }
+    if (params.priority !== undefined) {
+      urlParams.append('priority', params.priority.toString());
     }
 
-    const response = await fetch(`/api/memos?${params}`);
+    const response = await fetch(`/api/memos?${urlParams}`);
     if (!response.ok) throw new Error('메모를 불러오는데 실패했습니다.');
     const data = await response.json();
     return data;
@@ -49,14 +52,11 @@ export const createMemo = createAsyncThunk(
 
 export const deleteMemo = createAsyncThunk(
   'memos/deleteMemo',
-  async ({ id, createdAt }: { id: string; createdAt: string }) => {
-    const encodedCreatedAt = encodeURIComponent(createdAt);
-    const response = await fetch(
-      `/api/memos/${id}?createdAt=${encodedCreatedAt}`,
-      {
-        method: 'DELETE',
-      }
-    );
+  async (id: string) => {
+    // createdAt 제거
+    const response = await fetch(`/api/memos/${id}`, {
+      method: 'DELETE',
+    });
     if (!response.ok) throw new Error('메모 삭제에 실패했습니다.');
     return id;
   }
@@ -101,9 +101,12 @@ const memoSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchMemos.fulfilled, (state, action) => {
-        // 새로운 메모들을 기존 메모 배열에 추가
         const newMemos = action.payload.items;
-        state.memos = [...state.memos, ...newMemos];
+        // 정렬 키에 따라 메모 정렬
+        state.memos = [...state.memos, ...newMemos].sort((a, b) => {
+          // priority#updatedAt 형식의 sortKey를 기준으로 정렬
+          return b.sortKey.localeCompare(a.sortKey);
+        });
 
         state.lastEvaluatedKey = action.payload.lastEvaluatedKey;
         state.hasMore = !!action.payload.lastEvaluatedKey;

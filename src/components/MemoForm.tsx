@@ -34,8 +34,10 @@ interface MemoFormProps {
   onSubmit: (
     title: string,
     content: string,
+    priority: number,
     newFiles: File[],
-    deletedFileUrls: string[]
+    deletedFileUrls: string[],
+    prefix?: string
   ) => Promise<void>;
 }
 
@@ -48,6 +50,8 @@ const MemoForm: React.FC<MemoFormProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [prefix, setPrefix] = useState('📝');
+  const [priority, setPriority] = useState(3);
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<{ [key: string]: string }>({});
   const [deletedFileUrls, setDeletedFileUrls] = useState<string[]>([]);
@@ -174,7 +178,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
     e?.preventDefault();
     try {
       // 부모 컴포넌트에서 전달받은 onSubmit 함수 호출
-      await onSubmit(title, content, files, deletedFileUrls);
+      await onSubmit(title, content, priority, files, deletedFileUrls, prefix);
 
       // 생성 모드일 때만 폼 초기화
       if (mode === 'create') {

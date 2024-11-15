@@ -15,7 +15,6 @@ import Masonry from '@mui/lab/Masonry';
 import { Memo } from '@/types/memo';
 import MemoCard from './MemoCard';
 import MemoForm from './MemoForm';
-
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { memos, loading, error, hasMore } = useAppSelector(
@@ -27,13 +26,13 @@ const MemoList: React.FC = () => {
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
-      dispatch(fetchMemos());
+      dispatch(fetchMemos({}));
     }
   }, [dispatch, loading, hasMore]);
 
   // 초기 로딩
   useEffect(() => {
-    dispatch(fetchMemos()).then(() => setInitialLoading(false));
+    dispatch(fetchMemos({})).then(() => setInitialLoading(false));
   }, [dispatch]);
 
   // IntersectionObserver 설정
@@ -62,15 +61,18 @@ const MemoList: React.FC = () => {
     async (
       title: string,
       content: string,
+      priority: number,
       newFiles: File[],
-      deletedFileUrls: string[]
+      deletedFileUrls: string[],
+      prefix?: string
     ) => {
       if (!editingMemo) return;
 
       const formData = new FormData();
       formData.append('title', title);
+      formData.append('prefix', prefix || '');
       formData.append('content', content);
-      formData.append('createdAt', editingMemo.createdAt);
+      formData.append('priority', priority.toString());
       formData.append('deletedFileUrls', JSON.stringify(deletedFileUrls));
 
       newFiles.forEach((file, index) => {
@@ -97,10 +99,19 @@ const MemoList: React.FC = () => {
   );
 
   const handleCreate = useCallback(
-    async (title: string, content: string, newFiles: File[], _: string[]) => {
+    async (
+      title: string,
+      content: string,
+      priority: number,
+      newFiles: File[],
+      _: string[],
+      prefix?: string
+    ) => {
       const formData = new FormData();
       formData.append('title', title);
+      formData.append('prefix', prefix || '');
       formData.append('content', content);
+      formData.append('priority', priority.toString()); // priority 추가
       newFiles.forEach((file, index) => {
         formData.append(`files[${index}]`, file);
       });
@@ -111,10 +122,10 @@ const MemoList: React.FC = () => {
 
         // 목록 새로고침
         dispatch(resetMemos());
-        dispatch(fetchMemos());
+        dispatch(fetchMemos({}));
       } catch (error) {
         console.error('Failed to create memo:', error);
-        throw error; // MemoForm의 catch 블록에서 처리하도록 에러를 전파
+        throw error;
       }
     },
     [dispatch]
@@ -143,8 +154,6 @@ const MemoList: React.FC = () => {
         summary: data.summary || memo.summary,
       };
 
-      console.log(updatedMemo);
-
       dispatch({ type: 'memos/updateMemoInState', payload: updatedMemo });
     } catch (error) {
       console.error('Generate failed:', error);
@@ -152,10 +161,11 @@ const MemoList: React.FC = () => {
   };
 
   const handleDelete = useCallback(
-    async (id: string, createdAt: string) => {
+    async (id: string) => {
+      // createdAt 파라미터 제거
       if (window.confirm('정말 이 메모를 삭제하시겠습니까?')) {
         try {
-          await dispatch(deleteMemo({ id, createdAt })).unwrap();
+          await dispatch(deleteMemo(id)).unwrap(); // id만 전달
           dispatch({
             type: 'memos/removeMemoFromState',
             payload: id,

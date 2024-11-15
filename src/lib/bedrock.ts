@@ -131,8 +131,8 @@ export async function generateSummary(memo: Memo) {
       new UpdateCommand({
         TableName: 'Memos',
         Key: {
-          type: memo.type,
-          createdAt: memo.createdAt,
+          id: memo.id,
+          sortKey: memo.sortKey,
         },
         UpdateExpression:
           'SET title = :title, tags = :tags, summary = :summary',

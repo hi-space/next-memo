@@ -4,84 +4,16 @@ import {
   UpdateCommand,
   DeleteCommand,
   GetCommand,
+  QueryCommand,
+  PutCommand,
+  TransactWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '@/lib/dynamodb';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, generatePresignedUrl, generateCdnUrl } from '@/lib/s3';
 import { escapeRegExp, isImageFile } from '@/utils/format';
 import { generateSummary } from '@/lib/bedrock';
-import { Memo } from '@/types/memo';
-
-export async function DELETE(
-  request: NextRequest & { params: { id: string } }
-) {
-  try {
-    const url = request.nextUrl.pathname;
-    const id = url.split('/').pop();
-    const { searchParams } = new URL(request.url);
-    const createdAt = searchParams.get('createdAt') || '';
-    const type = 'MEMO';
-
-    if (!createdAt) {
-      return NextResponse.json(
-        { error: 'createdAt is required' },
-        { status: 400 }
-      );
-    }
-
-    // 메모 정보 조회
-    const getMemoResult = await docClient.send(
-      new GetCommand({
-        TableName: 'Memos',
-        Key: {
-          type,
-          createdAt,
-        },
-      })
-    );
-
-    if (!getMemoResult.Item) {
-      return NextResponse.json(
-        { error: '메모를 찾을 수 없습니다.' },
-        { status: 404 }
-      );
-    }
-
-    // S3에 업로드된 파일들이 있다면 모두 삭제
-    if (getMemoResult.Item?.files && Array.isArray(getMemoResult.Item.files)) {
-      const deletePromises = getMemoResult.Item.files.map((file) => {
-        const fileKey = file.fileUrl.split('.com/')[1];
-        return s3Client.send(
-          new DeleteObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET!,
-            Key: fileKey,
-          })
-        );
-      });
-
-      await Promise.all(deletePromises);
-    }
-
-    // DynamoDB에서 메모 삭제
-    await docClient.send(
-      new DeleteCommand({
-        TableName: 'Memos',
-        Key: {
-          type,
-          createdAt,
-        },
-      })
-    );
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: '메모 삭제에 실패했습니다.' },
-      { status: 500 }
-    );
-  }
-}
+import { FileInfo, Memo } from '@/types/memo';
 
 export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
@@ -90,27 +22,23 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     const formData = await request.formData();
     const title = formData.get('title') as string;
     let content = formData.get('content') as string;
-    const createdAt = formData.get('createdAt') as string;
+    const priority = parseInt(formData.get('priority') as string);
     const deletedFileUrls = formData.get('deletedFileUrls')
       ? JSON.parse(formData.get('deletedFileUrls') as string)
       : [];
 
-    if (!createdAt) {
-      return NextResponse.json(
-        { error: 'createdAt is required' },
-        { status: 400 }
-      );
-    }
-
     // 기존 메모 조회
     const getMemoResult = await docClient.send(
-      new GetCommand({
+      new QueryCommand({
         TableName: 'Memos',
-        Key: { type: 'MEMO', createdAt },
+        KeyConditionExpression: 'id = :id',
+        ExpressionAttributeValues: {
+          ':id': id,
+        },
       })
     );
 
-    const existingMemo = getMemoResult.Item;
+    const existingMemo = getMemoResult.Items?.[0];
     if (!existingMemo) {
       return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
     }
@@ -137,8 +65,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     }
 
     // 새로운 파일 업로드 및 URL 매핑
-    const newFiles: { fileName: string; fileUrl: string; fileType: string }[] =
-      [];
+    const newFiles: FileInfo[] = [];
     const urlMapping: { [key: string]: string } = {};
 
     const fileEntries = Array.from(formData.entries()).filter(([key]) =>
@@ -189,28 +116,53 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     const updatedFiles = [...existingFiles, ...newFiles];
     const updatedAt = new Date().toISOString();
 
+    // 새로운 sortKey 생성
+    const newSortKey = `${priority}#${updatedAt}`;
+
     // 메모 업데이트
-    const updatedRes = await docClient.send(
-      new UpdateCommand({
-        TableName: 'Memos',
-        Key: { type: 'MEMO', createdAt },
-        UpdateExpression:
-          'SET title = :title, content = :content, updatedAt = :updatedAt, files = :files, fileCount = :fileCount',
-        ExpressionAttributeValues: {
-          ':title': title,
-          ':content': content,
-          ':updatedAt': updatedAt,
-          ':files': updatedFiles,
-          ':fileCount': updatedFiles.length,
-        },
-        ReturnValues: 'ALL_NEW',
+    const updatedMemo: Memo = {
+      id,
+      sortKey: newSortKey,
+      title,
+      content,
+      priority,
+      files: updatedFiles,
+      fileCount: updatedFiles.length,
+      createdAt: existingMemo.createdAt,
+      updatedAt,
+    };
+
+    // await docClient.send(
+    //   new PutCommand({
+    //     TableName: 'Memos',
+    //     Item: updatedMemo,
+    //   })
+    // );
+
+    await docClient.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Delete: {
+              TableName: 'Memos',
+              Key: {
+                id: id,
+                sortKey: existingMemo.sortKey,
+              },
+            },
+          },
+          {
+            Put: {
+              TableName: 'Memos',
+              Item: updatedMemo,
+            },
+          },
+        ],
       })
     );
 
-    const updatedMemo = updatedRes.Attributes as Memo;
-
     // 응답에 파일을 CDN URL로 변경
-    if (updatedMemo?.files) {
+    if (updatedMemo.files) {
       const filesWithPresignedUrls = await Promise.all(
         updatedMemo.files.map(async (file) => {
           const fileKey = file.fileUrl.split('.com/')[1];
@@ -221,9 +173,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
         })
       );
 
-      // 업데이트된 메모의 `files` 필드 수정
       updatedMemo.files = filesWithPresignedUrls;
-      updatedMemo.fileCount = filesWithPresignedUrls.length;
     }
 
     return NextResponse.json(updatedMemo);
@@ -231,6 +181,72 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     console.error('Memo update failed:', error);
     return NextResponse.json(
       { error: 'Failed to update memo' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest & { params: { id: string } }
+) {
+  try {
+    const url = request.nextUrl.pathname;
+    const id = url.split('/').pop();
+
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    // 메모 정보 조회
+    const getMemoResult = await docClient.send(
+      new QueryCommand({
+        TableName: 'Memos',
+        KeyConditionExpression: 'id = :id',
+        ExpressionAttributeValues: {
+          ':id': id,
+        },
+      })
+    );
+
+    const memo = getMemoResult.Items?.[0];
+    if (!memo) {
+      return NextResponse.json(
+        { error: '메모를 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    // S3에 업로드된 파일들이 있다면 모두 삭제
+    if (memo.files && Array.isArray(memo.files)) {
+      const deletePromises = memo.files.map((file: FileInfo) => {
+        const fileKey = file.fileUrl.split('.com/')[1];
+        return s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET!,
+            Key: fileKey,
+          })
+        );
+      });
+
+      await Promise.all(deletePromises);
+    }
+
+    // DynamoDB에서 메모 삭제
+    await docClient.send(
+      new DeleteCommand({
+        TableName: 'Memos',
+        Key: {
+          id: id,
+          sortKey: memo.sortKey,
+        },
+      })
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('메모 삭제 실패:', error);
+    return NextResponse.json(
+      { error: '메모 삭제에 실패했습니다.' },
       { status: 500 }
     );
   }

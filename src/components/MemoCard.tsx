@@ -177,7 +177,6 @@ const MemoCard = React.memo<MemoCardProps>(
             borderRadius: '10px',
             backgroundColor: '#FAFAF9',
           }}>
-          {/* 이미지 미리보기 영역 */}
           {imageFiles.length > 0 && (
             <Box sx={{ position: 'relative' }}>
               <CardMedia
@@ -441,7 +440,9 @@ const MemoCard = React.memo<MemoCardProps>(
           fullWidth
           disableScrollLock={false}>
           <DialogTitle>
-            <Typography variant='body1'>📝 {memo.title}</Typography>
+            <Typography variant='body1'>
+              {memo.prefix} {memo.title}
+            </Typography>
           </DialogTitle>
           <IconButton
             aria-label='close'

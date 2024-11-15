@@ -1,6 +1,11 @@
 // src/app/api/memos/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PutCommand, ScanCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  PutCommand,
+  ScanCommand,
+  QueryCommand,
+  QueryCommandInput,
+} from '@aws-sdk/lib-dynamodb';
 import { docClient } from '@/lib/dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -14,6 +19,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const title = formData.get('title') as string;
     let content = formData.get('content') as string;
+    const prefix = formData.get('prefix') as string;
+    const priority = parseInt(formData.get('priority') as string) || 0;
     const id = uuidv4();
     const timestamp = new Date().toISOString();
     const files: FileInfo[] = [];
@@ -54,7 +61,6 @@ export async function POST(request: NextRequest) {
           }[${fileName}](/api/download/${id}-${fileName})`;
           urlMapping[markdownPattern.source] = markdownReplacement;
 
-          // 파일 정보 저장
           files.push({
             fileName: fileName,
             fileUrl: s3Url,
@@ -72,13 +78,16 @@ export async function POST(request: NextRequest) {
       const regex = new RegExp(pattern, 'g');
       content = content.replace(regex, replacement);
     });
+
     const memo: Memo = {
       id,
-      type: 'MEMO',
+      sortKey: `${priority}#${timestamp}`, // sortKey 추가
       title,
       content,
-      files, // 파일 정보 배열 저장
-      fileCount: files.length, // 파일 개수 저장
+      prefix,
+      priority,
+      files,
+      fileCount: files.length,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -104,25 +113,38 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const lastEvaluatedKey = searchParams.get('lastKey');
+    const priorityFilter = searchParams.get('priority');
     const limit = 10;
 
-    const result = await docClient.send(
-      new QueryCommand({
-        TableName: 'Memos',
-        KeyConditionExpression: '#type = :type',
-        ExpressionAttributeNames: {
-          '#type': 'type',
-        },
+    let queryParams: QueryCommandInput = {
+      TableName: 'Memos',
+      Limit: limit,
+      ScanIndexForward: false, // 최신 순으로 정렬
+    };
+
+    if (priorityFilter) {
+      // 특정 우선순위로 필터링하는 경우
+      queryParams = {
+        ...queryParams,
+        KeyConditionExpression: 'begins_with(sortKey, :priority)',
         ExpressionAttributeValues: {
-          ':type': 'MEMO',
+          ':priority': `${priorityFilter}#`,
         },
-        Limit: limit,
-        ScanIndexForward: false,
-        ...(lastEvaluatedKey && {
-          ExclusiveStartKey: JSON.parse(lastEvaluatedKey),
-        }),
-      })
-    );
+      };
+    } else {
+      // 전체 메모 조회의 경우 Scan 사용
+      return await scanMemos(
+        limit,
+        lastEvaluatedKey ? JSON.parse(lastEvaluatedKey) : undefined
+      );
+    }
+
+    // 페이지네이션 처리
+    if (lastEvaluatedKey) {
+      queryParams.ExclusiveStartKey = JSON.parse(lastEvaluatedKey);
+    }
+
+    const result = await docClient.send(new QueryCommand(queryParams));
 
     // 각 메모의 files 배열 내 fileUrl들을 presigned URL로 변환
     const items = await Promise.all(
@@ -160,4 +182,45 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Scan operation for retrieving all memos
+async function scanMemos(limit: number, lastEvaluatedKey?: any) {
+  const result = await docClient.send(
+    new ScanCommand({
+      TableName: 'Memos',
+      Limit: limit,
+      ExclusiveStartKey: lastEvaluatedKey,
+    })
+  );
+
+  // 각 메모의 files 배열 내 fileUrl들을 presigned URL로 변환
+  const items = await Promise.all(
+    (result.Items || []).map(async (item) => {
+      if (item.files && Array.isArray(item.files)) {
+        const updatedFiles = await Promise.all(
+          item.files.map(async (file: FileInfo) => {
+            if (file.fileUrl) {
+              const fileKey = file.fileUrl.split('.com/')[1];
+              return {
+                ...file,
+                fileUrl: generateCdnUrl(fileKey),
+              };
+            }
+            return file;
+          })
+        );
+        return {
+          ...item,
+          files: updatedFiles,
+        };
+      }
+      return item;
+    })
+  );
+
+  return NextResponse.json({
+    items: items,
+    lastEvaluatedKey: result.LastEvaluatedKey || null,
+  });
 }
