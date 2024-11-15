@@ -122,6 +122,8 @@ export async function generateSummary(memo: Memo) {
       throw error;
     }
 
+    summaryResult.title = memo.title || summaryResult.title;
+
     console.log(summaryResult);
 
     // DynamoDB 업데이트 명령 실행
@@ -135,7 +137,7 @@ export async function generateSummary(memo: Memo) {
         UpdateExpression:
           'SET title = :title, tags = :tags, summary = :summary',
         ExpressionAttributeValues: {
-          ':title': memo.title !== '' ? memo.title : summaryResult.title,
+          ':title': summaryResult.title,
           ':tags': summaryResult.tags,
           ':summary': summaryResult.summary,
         },

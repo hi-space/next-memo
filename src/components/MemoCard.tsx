@@ -77,6 +77,7 @@ const MemoCard = React.memo<MemoCardProps>(
     const [expanded, setExpanded] = React.useState(false);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleOpenDialog = () => {
       setOpenDialog(true);
@@ -123,6 +124,10 @@ const MemoCard = React.memo<MemoCardProps>(
     };
 
     const handleGenerateSummary = async () => {
+      if (isLoading) return;
+
+      setIsLoading(true);
+
       try {
         const response = await fetch(`/api/summary`, {
           method: 'POST',
@@ -135,6 +140,7 @@ const MemoCard = React.memo<MemoCardProps>(
         if (!response.ok) {
           console.error('API response error:', response.statusText);
           alert('생성이 실패했습니다.');
+          setIsLoading(false);
           return;
         }
 
@@ -150,6 +156,8 @@ const MemoCard = React.memo<MemoCardProps>(
       } catch (error) {
         console.error('Generate failed:', error);
         alert('생성이 실패했습니다.');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -433,9 +441,7 @@ const MemoCard = React.memo<MemoCardProps>(
           fullWidth
           disableScrollLock={false}>
           <DialogTitle>
-            <Typography variant='body1' color='secondary'>
-              {memo.title}
-            </Typography>
+            <Typography variant='body1'>📝 {memo.title}</Typography>
           </DialogTitle>
           <IconButton
             aria-label='close'
@@ -466,7 +472,7 @@ const MemoCard = React.memo<MemoCardProps>(
                     p: 1,
                     cursor: 'pointer',
                   }}>
-                  ✨ {memo.summary || 'Generate'}
+                  ✨ {isLoading ? '...' : memo.summary || 'Generate'}
                 </Typography>
               </Box>
             )}
