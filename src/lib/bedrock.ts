@@ -50,7 +50,9 @@ export async function generateSummary(memo: Memo) {
     const prompt = PromptTemplate.fromTemplate(TEMPLATE_SUMMARY);
     const text = await prompt.format({ content: memo.content });
 
-    const bedrock = new BedrockRuntimeClient({ region: 'us-east-1' });
+    const bedrock = new BedrockRuntimeClient({
+      region: process.env.AWS_BEDROCK_REGION ?? 'us-east-1',
+    });
     const payload: {
       anthropic_version: string;
       max_tokens: number;
@@ -97,6 +99,7 @@ export async function generateSummary(memo: Memo) {
         }
       } catch (error) {
         console.error('Failed to process file:', error);
+        alert(`Failed to process file: ${error}`);
       }
     }
 
@@ -116,6 +119,7 @@ export async function generateSummary(memo: Memo) {
       summaryResult = JSON.parse(result.content[0].text as string);
     } catch (error) {
       console.error('Failed to generate answer:', error);
+      alert(`Failed to generate answer: ${error}`);
     }
 
     console.log(summaryResult);
@@ -141,6 +145,8 @@ export async function generateSummary(memo: Memo) {
     return summaryResult;
   } catch (error) {
     console.error('요약 생성 중 에러 발생:', error);
+    alert(`요약 생성 중 에러 발생: ${error}`);
+
     return {
       title: '',
       summary: '',
