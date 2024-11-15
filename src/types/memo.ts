@@ -5,14 +5,20 @@ export interface FileInfo {
 }
 
 export interface Memo {
-  type?: string; // DynamoDB에서 사용하는 파티션 키
-  createdAt: string;
-  updatedAt: string;
   id: string;
+  type?: string; // DynamoDB에서 사용하는 파티션 키
+
+  emoji?: string;
+  title?: string;
   content: string;
+  priority?: number;
+
   files?: FileInfo[]; // 파일 정보 배열
   fileCount?: number; // 전체 파일 개수
-  title?: string;
+
   summary?: string;
   tags?: string[];
+
+  createdAt: string;
+  updatedAt: string;
 }
