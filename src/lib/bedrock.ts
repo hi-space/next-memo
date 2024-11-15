@@ -135,7 +135,7 @@ export async function generateSummary(memo: Memo) {
         UpdateExpression:
           'SET title = :title, tags = :tags, summary = :summary',
         ExpressionAttributeValues: {
-          ':title': memo.title || summaryResult.title,
+          ':title': memo.title !== '' ? memo.title : summaryResult.title,
           ':tags': summaryResult.tags,
           ':summary': summaryResult.summary,
         },
