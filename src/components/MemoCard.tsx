@@ -436,24 +436,6 @@ const MemoCard = React.memo<MemoCardProps>(
             <Typography variant='body1' color='secondary'>
               {memo.title}
             </Typography>
-            {memo && (
-              <Typography
-                variant='caption'
-                color='white'
-                onClick={handleGenerateSummary}
-                sx={{
-                  width: 'fit-content',
-                  fontSize: '0.875rem',
-                  borderRadius: '0.7rem',
-                  backgroundColor: '#F5F5F5',
-                  color: 'secondary.main',
-                  opacity: 0.9,
-                  p: 1,
-                  cursor: 'pointer',
-                }}>
-                ✨ {memo.summary || 'Generate'}
-              </Typography>
-            )}
           </DialogTitle>
           <IconButton
             aria-label='close'
@@ -468,8 +450,28 @@ const MemoCard = React.memo<MemoCardProps>(
           </IconButton>
 
           <DialogContent dividers>
-            <MarkdownContent content={memo.content} />
+            {memo && (
+              <Box sx={{ mb: 2 }}>
+                <Typography
+                  variant='caption'
+                  color='white'
+                  onClick={handleGenerateSummary}
+                  sx={{
+                    width: '100%',
+                    fontSize: '0.875rem',
+                    borderRadius: '0.7rem',
+                    backgroundColor: '#F5F5F5',
+                    color: 'secondary.main',
+                    opacity: 0.9,
+                    p: 1,
+                    cursor: 'pointer',
+                  }}>
+                  ✨ {memo.summary || 'Generate'}
+                </Typography>
+              </Box>
+            )}
 
+            <MarkdownContent content={memo.content} />
             {/* 첨부 파일 목록 */}
             {memo.files && memo.files.length > 0 && (
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
