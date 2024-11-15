@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
           );
 
           const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+          // const s3Url = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
 
           // URL 매핑 생성
           const markdownPattern = new RegExp(

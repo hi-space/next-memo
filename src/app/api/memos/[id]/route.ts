@@ -22,6 +22,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     const formData = await request.formData();
     const title = formData.get('title') as string;
     let content = formData.get('content') as string;
+    const prefix = formData.get('prefix') as string;
     const priority = parseInt(formData.get('priority') as string);
     const deletedFileUrls = formData.get('deletedFileUrls')
       ? JSON.parse(formData.get('deletedFileUrls') as string)
@@ -89,6 +90,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
         );
 
         const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+        // const s3Url = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
         const markdownPattern = new RegExp(
           `!?\\[${escapeRegExp(fileName)}\\]\\(blob:[^)]+\\)`,
           'g'
@@ -125,6 +127,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
       sortKey: newSortKey,
       title,
       content,
+      prefix,
       priority,
       files: updatedFiles,
       fileCount: updatedFiles.length,

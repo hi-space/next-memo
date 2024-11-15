@@ -111,7 +111,7 @@ const MemoList: React.FC = () => {
       formData.append('title', title);
       formData.append('prefix', prefix || '');
       formData.append('content', content);
-      formData.append('priority', priority.toString()); // priority 추가
+      formData.append('priority', priority.toString());
       newFiles.forEach((file, index) => {
         formData.append(`files[${index}]`, file);
       });
@@ -153,6 +153,8 @@ const MemoList: React.FC = () => {
         tags: data.tags || memo.tags,
         summary: data.summary || memo.summary,
       };
+
+      console.log(updatedMemo);
 
       dispatch({ type: 'memos/updateMemoInState', payload: updatedMemo });
     } catch (error) {
