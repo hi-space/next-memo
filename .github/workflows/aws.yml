@@ -81,6 +81,13 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
+    - name: Send Slack notification
+      if: success()
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{"text": "🚀 *Next Memo* 배포 완료! :white_check_mark: \n> ECS 서비스 업데이트가 성공적으로 완료되었습니다."}' \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
+
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -96,3 +103,14 @@ jobs:
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+
+  post:
+    name: Notify failure on Slack
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+    - name: Send Slack notification
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{"text": "❌ *Next Memo* 배포 실패! \n> ECS 서비스 업데이트 중 오류가 발생했습니다."}' \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
