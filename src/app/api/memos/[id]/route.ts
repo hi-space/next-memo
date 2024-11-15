@@ -154,13 +154,10 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    console.log(id);
-
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
