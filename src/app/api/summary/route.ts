@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
 
     const summary = await generateSummary(memo).catch((summaryError) => {
       console.error('Summary generation failed:', summaryError);
+      return NextResponse.json({ error: summaryError }, { status: 500 });
     });
 
     return NextResponse.json(summary);

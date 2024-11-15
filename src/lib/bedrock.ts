@@ -72,7 +72,6 @@ export async function generateSummary(memo: Memo) {
     };
 
     let modelId = MODEL_HAIKU;
-    let error;
 
     if (memo.fileCount && memo.files && memo.files.length > 0) {
       try {
@@ -100,7 +99,7 @@ export async function generateSummary(memo: Memo) {
         }
       } catch (error) {
         console.error('Failed to process file:', error);
-        error = `Failed to process file: ${error}`;
+        throw error;
       }
     }
 
@@ -120,7 +119,7 @@ export async function generateSummary(memo: Memo) {
       summaryResult = JSON.parse(result.content[0].text as string);
     } catch (error) {
       console.error('Failed to generate answer:', error);
-      error = `Failed to generate answer: ${error}`;
+      throw error;
     }
 
     console.log(summaryResult);
