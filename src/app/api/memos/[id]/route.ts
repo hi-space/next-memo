@@ -89,8 +89,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
           })
         );
 
-        const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-        // const s3Url = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
+        const s3Url = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
         const markdownPattern = new RegExp(
           `!?\\[${escapeRegExp(fileName)}\\]\\(blob:[^)]+\\)`,
           'g'
@@ -163,21 +162,6 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
         ],
       })
     );
-
-    // 응답에 파일을 CDN URL로 변경
-    if (updatedMemo.files) {
-      const filesWithPresignedUrls = await Promise.all(
-        updatedMemo.files.map(async (file) => {
-          const fileKey = file.fileUrl.split('.com/')[1];
-          return {
-            ...file,
-            fileUrl: generateCdnUrl(fileKey),
-          };
-        })
-      );
-
-      updatedMemo.files = filesWithPresignedUrls;
-    }
 
     return NextResponse.json(updatedMemo);
   } catch (error) {

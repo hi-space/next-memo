@@ -49,8 +49,7 @@ export async function POST(request: NextRequest) {
             })
           );
 
-          const s3Url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-          // const s3Url = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
+          const s3Url = `${process.env.AWS_CLOUDFRONT_URL}/${fileKey}`;
 
           // URL 매핑 생성
           const markdownPattern = new RegExp(
@@ -147,33 +146,8 @@ export async function GET(request: NextRequest) {
 
     const result = await docClient.send(new QueryCommand(queryParams));
 
-    // 각 메모의 files 배열 내 fileUrl들을 presigned URL로 변환
-    const items = await Promise.all(
-      (result.Items || []).map(async (item) => {
-        if (item.files && Array.isArray(item.files)) {
-          const updatedFiles = await Promise.all(
-            item.files.map(async (file: FileInfo) => {
-              if (file.fileUrl) {
-                const fileKey = file.fileUrl.split('.com/')[1];
-                return {
-                  ...file,
-                  fileUrl: generateCdnUrl(fileKey),
-                };
-              }
-              return file;
-            })
-          );
-          return {
-            ...item,
-            files: updatedFiles,
-          };
-        }
-        return item;
-      })
-    );
-
     return NextResponse.json({
-      items: items,
+      items: result.Items || [],
       lastEvaluatedKey: result.LastEvaluatedKey || null,
     });
   } catch (error) {
@@ -195,33 +169,8 @@ async function scanMemos(limit: number, lastEvaluatedKey?: any) {
     })
   );
 
-  // 각 메모의 files 배열 내 fileUrl들을 presigned URL로 변환
-  const items = await Promise.all(
-    (result.Items || []).map(async (item) => {
-      if (item.files && Array.isArray(item.files)) {
-        const updatedFiles = await Promise.all(
-          item.files.map(async (file: FileInfo) => {
-            if (file.fileUrl) {
-              const fileKey = file.fileUrl.split('.com/')[1];
-              return {
-                ...file,
-                fileUrl: generateCdnUrl(fileKey),
-              };
-            }
-            return file;
-          })
-        );
-        return {
-          ...item,
-          files: updatedFiles,
-        };
-      }
-      return item;
-    })
-  );
-
   return NextResponse.json({
-    items: items,
+    items: result.Items || [],
     lastEvaluatedKey: result.LastEvaluatedKey || null,
   });
 }

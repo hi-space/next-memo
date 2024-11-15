@@ -154,8 +154,6 @@ const MemoList: React.FC = () => {
         summary: data.summary || memo.summary,
       };
 
-      console.log(updatedMemo);
-
       dispatch({ type: 'memos/updateMemoInState', payload: updatedMemo });
     } catch (error) {
       console.error('Generate failed:', error);
