@@ -1,7 +1,7 @@
-import React from "react";
-import MarkdownPreview from "@uiw/react-markdown-preview";
-import katex from "katex";
-import { useTheme } from "@mui/material/styles";
+import React from 'react';
+import MarkdownPreview from '@uiw/react-markdown-preview';
+import katex from 'katex';
+import { useTheme } from '@mui/material/styles';
 
 interface MarkdownContentProps {
   content: string;
@@ -10,8 +10,8 @@ interface MarkdownContentProps {
 // 코드 문자열을 가져오는 헬퍼 함수
 const getCodeString = (children: any[]): string => {
   return children
-    .map((child) => (child && child.props ? child.props.children : ""))
-    .join("");
+    .map((child) => (child && child.props ? child.props.children : ''))
+    .join('');
 };
 
 // MarkdownContent 컴포넌트
@@ -28,9 +28,9 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
       components={{
         code: ({ children = [], className, ...props }) => {
           // $$ 수식 감지
-          if (typeof children === "string" && /^\$\$(.*)\$\$/.test(children)) {
+          if (typeof children === 'string' && /^\$\$(.*)\$\$/.test(children)) {
             const html = katex.renderToString(
-              children.replace(/^\$\$(.*)\$\$/, "$1"),
+              children.replace(/^\$\$(.*)\$\$/, '$1'),
               {
                 throwOnError: false,
               }
@@ -39,9 +39,9 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
               <code
                 dangerouslySetInnerHTML={{ __html: html }}
                 style={{
-                  background: "transparent",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
+                  background: 'transparent',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                 }}
               />
             );
@@ -53,8 +53,8 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
               ? getCodeString(props.node.children)
               : children;
           if (
-            typeof code === "string" &&
-            typeof className === "string" &&
+            typeof code === 'string' &&
+            typeof className === 'string' &&
             /^language-katex/.test(className.toLowerCase())
           ) {
             const html = katex.renderToString(code, {
@@ -63,9 +63,9 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
             return (
               <code
                 style={{
-                  fontSize: "150%",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
+                  fontSize: '150%',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                 }}
                 dangerouslySetInnerHTML={{ __html: html }}
               />
@@ -75,9 +75,8 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
           // 기본 코드 블록 렌더링
           return (
             <code
-              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-              className={String(className)}
-            >
+              style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+              className={String(className)}>
               {children}
             </code>
           );

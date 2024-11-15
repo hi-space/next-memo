@@ -13,6 +13,11 @@ import {
   Typography,
   Paper,
   TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Popover,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -24,7 +29,11 @@ import {
 } from '@mui/icons-material';
 import { Memo } from '@/types/memo';
 import MarkdownEditor from '@/components/MarkdownEditor';
+import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import { escapeRegExp, isImageFile } from '@/utils/format';
+import { Priority, priorityEmojis } from '@/types/priority';
+import PriorityBadge from './PriorityBadge';
+import { set } from 'date-fns';
 
 interface MemoFormProps {
   mode: 'create' | 'edit';
@@ -51,16 +60,35 @@ const MemoForm: React.FC<MemoFormProps> = ({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [prefix, setPrefix] = useState('📝');
-  const [priority, setPriority] = useState(3);
+  const [priority, setPriority] = useState<keyof typeof priorityEmojis>(3);
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<{ [key: string]: string }>({});
   const [deletedFileUrls, setDeletedFileUrls] = useState<string[]>([]);
   const existingFiles = memo?.files || [];
+  const [emojiAnchorEl, setEmojiAnchorEl] = useState<HTMLButtonElement | null>(
+    null
+  );
+  const [priorityAnchorEl, setPriorityAnchorEl] =
+    useState<HTMLButtonElement | null>(null);
+  const commonEmojis = [
+    '📝',
+    '📌',
+    '💡',
+    '⭐',
+    '🔍',
+    '📊',
+    '🎯',
+    '✨',
+    '⚡',
+    '🔥',
+  ];
 
   useEffect(() => {
     if (mode === 'edit' && memo) {
       setContent(memo.content);
       setTitle(memo.title || '');
+      setPrefix(memo.prefix || '');
+      setPriority((memo.priority as Priority) || 3);
     } else {
       setContent('');
       setTitle('');
@@ -208,14 +236,150 @@ const MemoForm: React.FC<MemoFormProps> = ({
         </Typography>
       )}
 
-      <TextField
-        label='Title'
-        variant='outlined'
-        color='primary'
-        size='small'
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <IconButton
+          size='small'
+          onClick={(e) => setEmojiAnchorEl(e.currentTarget)}
+          sx={{
+            width: 32,
+            height: 32,
+            fontSize: '1.2rem',
+          }}>
+          {prefix || (
+            <EmojiEmotionsIcon
+              sx={{ color: 'text.disabled', fontSize: '1.2rem' }}
+            />
+          )}
+        </IconButton>
+
+        <Popover
+          open={Boolean(emojiAnchorEl)}
+          anchorEl={emojiAnchorEl}
+          onClose={() => setEmojiAnchorEl(null)}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}>
+          <Box
+            sx={{
+              p: 1,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+              gap: 0.5,
+              width: 'fit-content',
+              maxWidth: '200px',
+            }}>
+            <MenuItem
+              dense
+              onClick={() => {
+                setPrefix('');
+                setEmojiAnchorEl(null);
+              }}
+              sx={{
+                minWidth: '32px',
+                justifyContent: 'center',
+                padding: '4px',
+              }}>
+              <em>❌</em>
+            </MenuItem>
+            {commonEmojis.map((emoji) => (
+              <MenuItem
+                key={emoji}
+                onClick={() => {
+                  setPrefix(emoji);
+                  setEmojiAnchorEl(null);
+                }}
+                dense
+                sx={{
+                  minWidth: '32px',
+                  justifyContent: 'center',
+                  padding: '4px',
+                }}>
+                {emoji}
+              </MenuItem>
+            ))}
+          </Box>
+        </Popover>
+
+        <TextField
+          label='Title'
+          variant='outlined'
+          color='primary'
+          size='small'
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          sx={{ flex: 1 }}
+        />
+
+        <IconButton
+          size='small'
+          onClick={(e) => setPriorityAnchorEl(e.currentTarget)}
+          sx={{
+            p: 0,
+            '&:hover': {
+              backgroundColor: 'transparent',
+            },
+          }}>
+          <PriorityBadge priority={priority} size='small' />
+        </IconButton>
+
+        <Popover
+          open={Boolean(priorityAnchorEl)}
+          anchorEl={priorityAnchorEl}
+          onClose={() => setPriorityAnchorEl(null)}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          sx={{
+            '& .MuiPopover-paper': {
+              width: 'fit-content',
+              marginTop: 0.5,
+              '& .MuiMenuItem-root': {
+                width: '100%',
+              },
+            },
+          }}>
+          <Box
+            sx={{
+              p: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.5,
+              width: '100%',
+            }}>
+            {Object.entries(priorityEmojis).map(([value]) => {
+              const priorityValue = Number(value) as Priority;
+              return (
+                <MenuItem
+                  key={value}
+                  onClick={() => {
+                    setPriority(priorityValue);
+                    setPriorityAnchorEl(null);
+                  }}
+                  dense
+                  selected={priority === priorityValue}
+                  sx={{
+                    borderRadius: 1,
+                    py: 1,
+                    width: '100%',
+                    justifyContent: 'flex-start',
+                  }}>
+                  <PriorityBadge priority={priorityValue} size='small' />
+                </MenuItem>
+              );
+            })}
+          </Box>
+        </Popover>
+      </Box>
 
       <MarkdownEditor
         value={content}

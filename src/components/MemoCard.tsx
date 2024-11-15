@@ -35,6 +35,8 @@ import {
 import { Memo } from '@/types/memo';
 import { formatDateTime } from '@/utils/dateFormat';
 import { isImageFile } from '@/utils/format';
+import PriorityBadge from './PriorityBadge';
+import { Priority } from '@/types/priority';
 
 interface MemoCardProps {
   memo: Memo;
@@ -221,7 +223,7 @@ const MemoCard = React.memo<MemoCardProps>(
               pb: 1,
             }}>
             <Typography variant='body1'>
-              {memo?.title ? memo.title : ''}
+              {memo?.prefix} {memo?.title ? memo.title : ''}
             </Typography>
 
             {memo.summary && (
@@ -275,6 +277,8 @@ const MemoCard = React.memo<MemoCardProps>(
               <Typography variant='body2' color='textSecondary'>
                 {formatDateTime(memo.createdAt)}
               </Typography>
+              <PriorityBadge priority={memo.priority as Priority} />
+
               {memo.files && memo.files.length > 0 && (
                 <Chip
                   size='small'
