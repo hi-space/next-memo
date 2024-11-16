@@ -105,20 +105,17 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
 
     // 새로운 sortKey 생성
     const newSortKey = `${priority}#${updatedAt}`;
+    const existingSortKey = existingMemo.sortKey;
 
     // 메모 업데이트
-    const updatedMemo: Memo = {
-      id,
-      sortKey: newSortKey,
-      title,
-      content,
-      prefix,
-      priority,
-      files: updatedFiles,
-      fileCount: updatedFiles.length,
-      createdAt: existingMemo.createdAt,
-      updatedAt,
-    };
+    existingMemo.sortKey = newSortKey;
+    existingMemo.title = title;
+    existingMemo.content = content;
+    existingMemo.prefix = prefix;
+    existingMemo.priority = priority;
+    existingMemo.files = updatedFiles;
+    existingMemo.fileCount = updatedFiles.length;
+    existingMemo.updatedAt = updatedAt;
 
     await docClient.send(
       new TransactWriteCommand({
@@ -128,21 +125,21 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
               TableName: 'Memos',
               Key: {
                 id: id,
-                sortKey: existingMemo.sortKey,
+                sortKey: existingSortKey,
               },
             },
           },
           {
             Put: {
               TableName: 'Memos',
-              Item: updatedMemo,
+              Item: existingMemo,
             },
           },
         ],
       })
     );
 
-    return NextResponse.json(updatedMemo);
+    return NextResponse.json(existingMemo);
   } catch (error) {
     console.error('Memo update failed:', error);
     return NextResponse.json(
