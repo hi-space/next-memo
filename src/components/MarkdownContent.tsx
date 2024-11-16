@@ -25,6 +25,9 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
         backgroundColor: theme.palette.background.paper,
         fontSize: theme.typography.body1.fontSize,
       }}
+      wrapperElement={{
+        'data-color-mode': 'light',
+      }}
       components={{
         code: ({ children = [], className, ...props }) => {
           // $$ 수식 감지
