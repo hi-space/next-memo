@@ -10,7 +10,7 @@ import {
   resetMemos,
   createMemo,
 } from '@/store/memoSlice';
-import { Box, LinearProgress, Alert } from '@mui/material';
+import { Box, LinearProgress, Alert, Divider } from '@mui/material';
 import Masonry from '@mui/lab/Masonry';
 import { Memo } from '@/types/memo';
 import MemoCard from './MemoCard';
@@ -205,7 +205,7 @@ const MemoList: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <MemoForm mode='create' onSubmit={handleCreate} />
 
-      <Masonry columns={{ sm: 1, lg: 2 }} spacing={2} sx={{ margin: 0 }}>
+      <Masonry columns={{ sm: 1, lg: 1 }} spacing={2} sx={{ margin: 0 }}>
         {memos.map((memo, index) => (
           <MemoCard
             key={memo.id}

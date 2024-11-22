@@ -219,7 +219,26 @@ const MemoForm: React.FC<MemoFormProps> = ({
       {mode === 'create' && (
         <Typography variant='h6' component='h2'>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AddCircleOutlineIcon sx={{ fontSize: '1.7rem' }} />새 메모
+            <AddCircleOutlineIcon sx={{ fontSize: '1.7rem' }} />
+            <Box
+              sx={{
+                height: 30,
+                maxWidth: '100%',
+                display: 'flex',
+                justifyContent: 'start',
+                alignItems: 'center',
+                overflow: 'hidden',
+              }}>
+              <img
+                src='/next-memo.png'
+                alt='NEXT MEMO'
+                style={{
+                  height: '100%',
+                  width: 'auto',
+                  maxWidth: '100%',
+                }}
+              />
+            </Box>
           </Box>
         </Typography>
       )}
@@ -364,7 +383,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
       <MarkdownEditor
         value={content}
         onChange={setContent}
-        height={isDialog ? '60vh' : '400px'}
+        height={isDialog ? '60vh' : '300px'}
       />
 
       {/* 파일 업로드 영역 */}
@@ -421,7 +440,7 @@ const MemoForm: React.FC<MemoFormProps> = ({
                 <Typography sx={{ flex: 1 }}>
                   {file.name} ({(file.size / 1024).toFixed(1)}KB)
                 </Typography>
-                {previewUrls[file.name] && (
+                {isImageFile(file.name) && previewUrls[file.name] && (
                   <Box sx={{ mt: 1, maxWidth: '200px' }}>
                     <img
                       src={previewUrls[file.name]}
