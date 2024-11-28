@@ -107,28 +107,23 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     const updatedAt = Date.now(); // Unix timestamp
 
     // 메모 업데이트
-    const updatedMemo: Memo = {
-      id: existingMemo.id, // 기존 메모의 id 유지
-      createdAt: existingMemo.createdAt, // 기존 메모의 createdAt 유지
-      gsiPartitionKey: 'ALL', // GSI 고정값 설정
-      title,
-      content,
-      prefix,
-      priority,
-      files: updatedFiles,
-      fileCount: updatedFiles.length,
-      updatedAt, // 수정된 시간 갱신
-    };
+    existingMemo.title = title;
+    existingMemo.content = content;
+    existingMemo.prefix = prefix;
+    existingMemo.priority = priority;
+    existingMemo.files = updatedFiles;
+    existingMemo.fileCount = updatedFiles.length;
+    existingMemo.updatedAt = updatedAt;
 
     // DynamoDB에 업데이트
     await docClient.send(
       new PutCommand({
         TableName: DYNAMODB_TABLE,
-        Item: updatedMemo,
+        Item: existingMemo,
       })
     );
 
-    return NextResponse.json(updatedMemo);
+    return NextResponse.json(existingMemo);
   } catch (error) {
     console.error('Memo update failed:', error);
     return NextResponse.json(

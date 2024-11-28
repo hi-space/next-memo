@@ -1,7 +1,7 @@
 import { format, formatDistanceToNow, isSameYear, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
-export const formatDateTime = (dateString: string) => {
+export const formatDateTime = (dateString: string | number) => {
   try {
     const now = new Date();
     const date = new Date(dateString);

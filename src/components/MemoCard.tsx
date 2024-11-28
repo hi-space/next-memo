@@ -41,7 +41,7 @@ import { Priority } from '@/types/priority';
 interface MemoCardProps {
   memo: Memo;
   onEdit: (memo: Memo) => void;
-  onDelete: (id: string, createdAt: string) => void;
+  onDelete: (id: string, createdAt: number) => void;
   onUpdate: (memo: Memo) => void;
 }
 
