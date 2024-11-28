@@ -17,7 +17,7 @@ const renderMarkdown = (text: string) => {
     // Markdown 파싱
     return mdParser.render(text);
   } catch (error) {
-    console.error('Markdown 렌더링 에러:', error);
+    // console.error('Markdown 렌더링 에러:', error);
     // 에러 발생 시 텍스트 그대로 반환
     return `<pre>${text}</pre>`;
   }

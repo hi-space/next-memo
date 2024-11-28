@@ -15,6 +15,7 @@ import Masonry from '@mui/lab/Masonry';
 import { Memo } from '@/types/memo';
 import MemoCard from './MemoCard';
 import MemoForm from './MemoForm';
+
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { memos, loading, error, hasMore } = useAppSelector(
@@ -69,6 +70,7 @@ const MemoList: React.FC = () => {
       if (!editingMemo) return;
 
       const formData = new FormData();
+      if (!editingMemo || !editingMemo.id) return;
       formData.append('id', editingMemo.id);
       formData.append('title', title);
       formData.append('prefix', prefix || '');

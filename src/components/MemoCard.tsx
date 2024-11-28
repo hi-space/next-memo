@@ -275,7 +275,7 @@ const MemoCard = React.memo<MemoCardProps>(
             }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
               <Typography variant='body2' color='textSecondary'>
-                {formatDateTime(memo.createdAt)}
+                {formatDateTime(memo.updatedAt)}
               </Typography>
               <PriorityBadge priority={memo.priority as Priority} />
 

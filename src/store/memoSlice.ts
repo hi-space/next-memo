@@ -53,7 +53,6 @@ export const createMemo = createAsyncThunk(
 export const deleteMemo = createAsyncThunk(
   'memos/deleteMemo',
   async (id: string) => {
-    // createdAt 제거
     const response = await fetch(`/api/memos/${id}`, {
       method: 'DELETE',
     });
@@ -102,12 +101,11 @@ const memoSlice = createSlice({
       })
       .addCase(fetchMemos.fulfilled, (state, action) => {
         const newMemos = action.payload.items;
-        // 정렬 키에 따라 메모 정렬
-        state.memos = [...state.memos, ...newMemos].sort((a, b) => {
-          // priority#updatedAt 형식의 sortKey를 기준으로 정렬
-          return b.sortKey.localeCompare(a.sortKey);
-        });
 
+        // 기존 데이터에 새 데이터를 추가
+        state.memos = [...state.memos, ...newMemos];
+
+        // 페이지네이션 처리
         state.lastEvaluatedKey = action.payload.lastEvaluatedKey;
         state.hasMore = !!action.payload.lastEvaluatedKey;
         state.loading = false;
@@ -148,6 +146,7 @@ const memoSlice = createSlice({
 
         const updatedMemo = action.payload;
 
+        // 메모 상태 업데이트
         state.memos = state.memos.map((memo) =>
           memo.id === updatedMemo.id ? { ...updatedMemo } : memo
         );

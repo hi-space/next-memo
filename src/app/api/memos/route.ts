@@ -13,6 +13,12 @@ import { s3Client, generateCdnUrl } from '@/lib/s3';
 import { FileInfo, Memo } from '@/types/memo';
 import { escapeRegExp, isImageFile } from '@/utils/format';
 import { generateSummary } from '@/lib/bedrock';
+import {
+  DYNAMODB_TABLE,
+  GSI_PARTITION_KEY,
+  PRIORITY_UPDATED_INDEX,
+  UPDATED_INDEX,
+} from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,12 +27,12 @@ export async function POST(request: NextRequest) {
     let content = formData.get('content') as string;
     const prefix = formData.get('prefix') as string;
     const priority = parseInt(formData.get('priority') as string) || 0;
-    const id = uuidv4();
-    const timestamp = new Date().toISOString();
+    const id = uuidv4(); // 고유 ID 생성
+    const timestamp = Date.now(); // 현재 시간 (Unix Timestamp)
     const files: FileInfo[] = [];
     const urlMapping: { [key: string]: string } = {};
 
-    // 새로운 파일들 처리
+    // 새로운 파일 처리
     const fileEntries = Array.from(formData.entries()).filter(([key]) =>
       key.startsWith('files[')
     );
@@ -79,22 +85,24 @@ export async function POST(request: NextRequest) {
       content = content.replace(regex, replacement);
     });
 
+    // DynamoDB에 저장할 메모 데이터 생성
     const memo: Memo = {
-      id,
-      sortKey: `${priority}#${timestamp}`, // sortKey 추가
+      id, // Partition Key
+      gsiPartitionKey: 'ALL', // GSI에서 사용하는 고정 Partition Key
+      priority, // GSI의 Partition Key
       title,
       content,
       prefix,
-      priority,
       files,
       fileCount: files.length,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+      createdAt: timestamp, // 생성 시각
+      updatedAt: timestamp, // 수정 시각
     };
 
+    // DynamoDB에 메모 삽입
     await docClient.send(
       new PutCommand({
-        TableName: 'Memos',
+        TableName: DYNAMODB_TABLE,
         Item: memo,
       })
     );
@@ -112,31 +120,31 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const priority = searchParams.get('priority');
     const lastEvaluatedKey = searchParams.get('lastKey');
-    const priorityFilter = searchParams.get('priority');
     const limit = 10;
 
-    let queryParams: QueryCommandInput = {
-      TableName: 'Memos',
+    // QueryCommandInput 생성
+    const queryParams: QueryCommandInput = {
+      TableName: DYNAMODB_TABLE,
       Limit: limit,
-      ScanIndexForward: false, // 최신 순으로 정렬
+      ScanIndexForward: false, // 최신순 정렬
     };
 
-    if (priorityFilter) {
-      // 특정 우선순위로 필터링하는 경우
-      queryParams = {
-        ...queryParams,
-        KeyConditionExpression: 'begins_with(sortKey, :priority)',
-        ExpressionAttributeValues: {
-          ':priority': `${priorityFilter}#`,
-        },
+    if (priority) {
+      // `priority`가 있는 경우 PRIORITY_UPDATED_INDEX를 사용
+      queryParams.IndexName = PRIORITY_UPDATED_INDEX;
+      queryParams.KeyConditionExpression = 'priority = :priority';
+      queryParams.ExpressionAttributeValues = {
+        ':priority': Number(priority),
       };
     } else {
-      // 전체 메모 조회의 경우 Scan 사용
-      return await scanMemos(
-        limit,
-        lastEvaluatedKey ? JSON.parse(lastEvaluatedKey) : undefined
-      );
+      // `priority`가 없는 경우 `UpdatedIndex`를 사용
+      queryParams.IndexName = UPDATED_INDEX;
+      queryParams.KeyConditionExpression = 'gsiPartitionKey = :key';
+      queryParams.ExpressionAttributeValues = {
+        ':key': GSI_PARTITION_KEY,
+      };
     }
 
     // 페이지네이션 처리
@@ -144,33 +152,19 @@ export async function GET(request: NextRequest) {
       queryParams.ExclusiveStartKey = JSON.parse(lastEvaluatedKey);
     }
 
+    // DynamoDB 쿼리 실행
     const result = await docClient.send(new QueryCommand(queryParams));
 
+    // 응답 반환
     return NextResponse.json({
       items: result.Items || [],
       lastEvaluatedKey: result.LastEvaluatedKey || null,
     });
   } catch (error) {
-    console.error(error);
+    console.error('메모 불러오기 실패:', error);
     return NextResponse.json(
-      { error: '메모 불러오기에 실패했습니다.' },
+      { error: '메모를 불러오는 데 실패했습니다.' },
       { status: 500 }
     );
   }
-}
-
-// Scan operation for retrieving all memos
-async function scanMemos(limit: number, lastEvaluatedKey?: any) {
-  const result = await docClient.send(
-    new ScanCommand({
-      TableName: 'Memos',
-      Limit: limit,
-      ExclusiveStartKey: lastEvaluatedKey,
-    })
-  );
-
-  return NextResponse.json({
-    items: result.Items || [],
-    lastEvaluatedKey: result.LastEvaluatedKey || null,
-  });
 }

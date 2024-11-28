@@ -129,10 +129,9 @@ export async function generateSummary(memo: Memo) {
     // DynamoDB 업데이트 명령 실행
     await docClient.send(
       new UpdateCommand({
-        TableName: 'Memos',
+        TableName: 'next-memo', // 테이블 이름 수정
         Key: {
-          id: memo.id,
-          sortKey: memo.sortKey,
+          id: memo.id, // Primary Key만 사용
         },
         UpdateExpression:
           'SET title = :title, tags = :tags, summary = :summary',

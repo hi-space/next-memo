@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   DeleteCommand,
+  GetCommand,
+  PutCommand,
   QueryCommand,
   TransactWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
@@ -10,6 +12,7 @@ import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client } from '@/lib/s3';
 import { escapeRegExp, isImageFile } from '@/utils/format';
 import { FileInfo, Memo } from '@/types/memo';
+import { DYNAMODB_TABLE } from '@/lib/constants';
 
 export async function PUT(request: NextRequest & { params: { id: string } }) {
   try {
@@ -26,7 +29,7 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
     // 기존 메모 조회
     const getMemoResult = await docClient.send(
       new QueryCommand({
-        TableName: 'Memos',
+        TableName: DYNAMODB_TABLE,
         KeyConditionExpression: 'id = :id',
         ExpressionAttributeValues: {
           ':id': id,
@@ -101,45 +104,31 @@ export async function PUT(request: NextRequest & { params: { id: string } }) {
 
     // 기존 파일과 새 파일 병합
     const updatedFiles = [...existingFiles, ...newFiles];
-    const updatedAt = new Date().toISOString();
-
-    // 새로운 sortKey 생성
-    const newSortKey = `${priority}#${updatedAt}`;
-    const existingSortKey = existingMemo.sortKey;
+    const updatedAt = Date.now(); // Unix timestamp
 
     // 메모 업데이트
-    existingMemo.sortKey = newSortKey;
-    existingMemo.title = title;
-    existingMemo.content = content;
-    existingMemo.prefix = prefix;
-    existingMemo.priority = priority;
-    existingMemo.files = updatedFiles;
-    existingMemo.fileCount = updatedFiles.length;
-    existingMemo.updatedAt = updatedAt;
+    const updatedMemo: Memo = {
+      id: existingMemo.id, // 기존 메모의 id 유지
+      createdAt: existingMemo.createdAt, // 기존 메모의 createdAt 유지
+      gsiPartitionKey: 'ALL', // GSI 고정값 설정
+      title,
+      content,
+      prefix,
+      priority,
+      files: updatedFiles,
+      fileCount: updatedFiles.length,
+      updatedAt, // 수정된 시간 갱신
+    };
 
+    // DynamoDB에 업데이트
     await docClient.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            Delete: {
-              TableName: 'Memos',
-              Key: {
-                id: id,
-                sortKey: existingSortKey,
-              },
-            },
-          },
-          {
-            Put: {
-              TableName: 'Memos',
-              Item: existingMemo,
-            },
-          },
-        ],
+      new PutCommand({
+        TableName: DYNAMODB_TABLE,
+        Item: updatedMemo,
       })
     );
 
-    return NextResponse.json(existingMemo);
+    return NextResponse.json(updatedMemo);
   } catch (error) {
     console.error('Memo update failed:', error);
     return NextResponse.json(
@@ -155,50 +144,48 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
+    if (!id || typeof id !== 'string') {
+      console.error('Invalid id format:', id);
+      return NextResponse.json({ error: 'Invalid id format' }, { status: 400 });
     }
+
+    console.log('Received ID for deletion:', id);
 
     // 메모 정보 조회
     const getMemoResult = await docClient.send(
-      new QueryCommand({
-        TableName: 'Memos',
-        KeyConditionExpression: 'id = :id',
-        ExpressionAttributeValues: {
-          ':id': id,
-        },
+      new GetCommand({
+        TableName: 'next-memo', // 테이블 이름
+        Key: { id }, // 단일 Partition Key로 조회
       })
     );
 
-    const memo = getMemoResult.Items?.[0];
+    const memo = getMemoResult.Item;
     if (!memo) {
+      console.error('Memo not found:', id);
       return NextResponse.json(
         { error: '메모를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
 
-    if (!memo.sortKey) {
-      return NextResponse.json(
-        { error: 'sortKey를 찾을 수 없습니다.' },
-        { status: 400 }
-      );
-    }
+    console.log('Memo found for deletion:', memo);
 
-    // S3에 업로드된 파일들이 있다면 모두 삭제
+    // S3에 업로드된 파일 삭제
     if (memo.files && Array.isArray(memo.files)) {
       await deleteS3Files(memo.files);
+      console.log('S3 files deleted successfully');
     }
+
     // DynamoDB에서 메모 삭제
     await docClient.send(
       new DeleteCommand({
-        TableName: 'Memos',
-        Key: {
-          id: id,
-          sortKey: memo.sortKey,
-        },
+        TableName: 'next-memo', // 테이블 이름
+        Key: { id }, // 단일 Partition Key로 삭제
       })
     );
+
+    console.log('Memo deleted successfully:', id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -210,13 +197,21 @@ export async function DELETE(
   }
 }
 
+// S3에서 파일 삭제
 async function deleteS3Files(files: FileInfo[]) {
   if (!files || !Array.isArray(files) || files.length === 0) return;
 
   const deletePromises = files.map((file) => {
     const fileKey = file.fileUrl
       .split(process.env.AWS_CLOUDFRONT_URL!)[1]
-      .substring(1);
+      ?.substring(1);
+
+    if (!fileKey) {
+      console.error('파일 키 추출 실패:', file.fileUrl);
+      return Promise.resolve(); // Skip this file
+    }
+
+    console.log('Deleting S3 file:', fileKey);
 
     return s3Client.send(
       new DeleteObjectCommand({

@@ -6,10 +6,32 @@
 <summary>DynamoDB Table</summary>
 
 ```json
-aws dynamodb update-table \
-    --table-name Memos \
-    --attribute-definitions AttributeName=createdAt,AttributeType=S \
-    --global-secondary-index-updates \
-        "[{\"Create\":{\"IndexName\": \"CreatedAtIndex\",\"KeySchema\":[{\"AttributeName\":\"id\",\"KeyType\":\"HASH\"},{\"AttributeName\":\"createdAt\",\"KeyType\":\"RANGE\"}],\"ProvisionedThroughput\":{\"ReadCapacityUnits\":5,\"WriteCapacityUnits\":5}}}]"
+aws dynamodb create-table \
+  --table-name next-memo \
+  --attribute-definitions \
+    AttributeName=id,AttributeType=S \
+    AttributeName=priority,AttributeType=N \
+    AttributeName=updatedAt,AttributeType=N \
+    AttributeName=gsiPartitionKey,AttributeType=S \
+  --key-schema \
+    AttributeName=id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --global-secondary-indexes \
+    '[{
+      "IndexName": "UpdatedIndex",
+      "KeySchema": [
+        {"AttributeName": "gsiPartitionKey", "KeyType": "HASH"},
+        {"AttributeName": "updatedAt", "KeyType": "RANGE"}
+      ],
+      "Projection": {"ProjectionType": "ALL"}
+    },
+    {
+      "IndexName": "PriorityUpdatedIndex",
+      "KeySchema": [
+        {"AttributeName": "priority", "KeyType": "HASH"},
+        {"AttributeName": "updatedAt", "KeyType": "RANGE"}
+      ],
+      "Projection": {"ProjectionType": "ALL"}
+    }]'
 ```
 </detail>
