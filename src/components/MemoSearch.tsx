@@ -7,22 +7,34 @@ import {
   Paper,
   IconButton,
   Popover,
+  Typography,
+  Chip,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import InputAdornment from '@mui/material/InputAdornment';
 import PriorityBadge from './PriorityBadge';
 import { Priority, priorityEmojis } from '@/types/priority';
-
+import { Emojis } from '@/types/emoji';
 interface MemoSearchProps {
   onSearch: (value: string) => void;
-  onFilter: (value: Priority) => void;
+  onPriorityFilter: (value: Priority | null) => void;
+  onPrefixFilter: (value: string) => void;
 }
 
-const MemoSearch: React.FC<MemoSearchProps> = ({ onSearch, onFilter }) => {
+const MemoSearch: React.FC<MemoSearchProps> = ({
+  onSearch,
+  onPriorityFilter,
+  onPrefixFilter,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [priority, setPriority] = useState<keyof typeof priorityEmojis>(3);
+  const [priority, setPriority] = useState<Priority | null>(null);
+  const [prefix, setPrefix] = useState('');
   const [priorityAnchorEl, setPriorityAnchorEl] =
     useState<HTMLButtonElement | null>(null);
+  const [emojiAnchorEl, setEmojiAnchorEl] = useState<HTMLButtonElement | null>(
+    null
+  );
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -46,33 +58,69 @@ const MemoSearch: React.FC<MemoSearchProps> = ({ onSearch, onFilter }) => {
           alignItems: { sm: 'center' },
           justifyContent: 'space-between',
         }}>
-        <TextField
-          fullWidth
-          placeholder='메모 검색...'
-          value={searchTerm}
-          onChange={handleSearch}
-          variant='standard'
-          sx={{
-            flex: 1,
-          }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position='start'>
-                  <Search
-                    sx={{ color: 'text.secondary', width: 20, height: 20 }}
-                  />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+        <Box sx={{ display: 'flex', gap: 1, flex: 1, alignItems: 'flex-end' }}>
+          <IconButton
+            size='small'
+            onClick={(e) => setEmojiAnchorEl(e.currentTarget)}
+            sx={{
+              width: 32,
+              height: 32,
+              fontSize: '1.2rem',
+              mb: 0.5,
+            }}>
+            {prefix || <EmojiEmotionsIcon sx={{ fontSize: '1.2rem' }} />}
+          </IconButton>
+
+          <TextField
+            fullWidth
+            placeholder='메모 검색...'
+            value={searchTerm}
+            onChange={handleSearch}
+            variant='standard'
+            sx={{ flex: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <Search
+                      sx={{ color: 'text.secondary', width: 20, height: 20 }}
+                    />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton
             onClick={(e) => setPriorityAnchorEl(e.currentTarget)}
             sx={{ p: 0 }}>
-            <PriorityBadge priority={priority} />
+            {priority !== null ? (
+              <PriorityBadge priority={priority} />
+            ) : (
+              <Chip
+                icon={
+                  <span
+                    style={{
+                      fontSize: '0.875rem',
+                    }}>
+                    ⚪
+                  </span>
+                }
+                size='small'
+                variant='outlined'
+                sx={{
+                  '& .MuiChip-icon': {
+                    ml: 0.5,
+                    mr: -0.5,
+                  },
+                  height: 24,
+                  borderRadius: '12px',
+                }}
+                label='전체'
+              />
+            )}
           </IconButton>
 
           <Popover
@@ -104,6 +152,44 @@ const MemoSearch: React.FC<MemoSearchProps> = ({ onSearch, onFilter }) => {
                 gap: 0.5,
                 width: '100%',
               }}>
+              <MenuItem
+                onClick={() => {
+                  setPriority(null);
+                  setPriorityAnchorEl(null);
+                  onPriorityFilter(null);
+                }}
+                dense
+                selected={priority === null}
+                sx={{
+                  borderRadius: 1,
+                  py: 1,
+                  width: '100%',
+                  justifyContent: 'flex-start',
+                }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    icon={
+                      <span
+                        style={{
+                          fontSize: '0.875rem',
+                        }}>
+                        ⚪
+                      </span>
+                    }
+                    size='small'
+                    variant='outlined'
+                    sx={{
+                      '& .MuiChip-icon': {
+                        ml: 0.5,
+                        mr: -0.5,
+                      },
+                      height: 24,
+                      borderRadius: '12px',
+                    }}
+                    label='전체'
+                  />
+                </Box>
+              </MenuItem>
               {Object.entries(priorityEmojis).map(([value]) => {
                 const priorityValue = Number(value) as Priority;
                 return (
@@ -112,7 +198,7 @@ const MemoSearch: React.FC<MemoSearchProps> = ({ onSearch, onFilter }) => {
                     onClick={() => {
                       setPriority(priorityValue);
                       setPriorityAnchorEl(null);
-                      onFilter(priorityValue);
+                      onPriorityFilter(priorityValue);
                     }}
                     dense
                     selected={priority === priorityValue}
@@ -130,6 +216,61 @@ const MemoSearch: React.FC<MemoSearchProps> = ({ onSearch, onFilter }) => {
           </Popover>
         </Box>
       </Box>
+
+      <Popover
+        open={Boolean(emojiAnchorEl)}
+        anchorEl={emojiAnchorEl}
+        onClose={() => setEmojiAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}>
+        <Box
+          sx={{
+            p: 1,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+            gap: 0.5,
+            width: 'fit-content',
+            maxWidth: '200px',
+          }}>
+          <MenuItem
+            dense
+            onClick={() => {
+              setPrefix('');
+              setEmojiAnchorEl(null);
+              onPrefixFilter('');
+            }}
+            sx={{
+              minWidth: '32px',
+              justifyContent: 'center',
+              padding: '4px',
+            }}>
+            <em>❌</em>
+          </MenuItem>
+          {Emojis.map((emoji) => (
+            <MenuItem
+              key={emoji}
+              onClick={() => {
+                setPrefix(emoji);
+                setEmojiAnchorEl(null);
+                onPrefixFilter(emoji);
+              }}
+              dense
+              sx={{
+                minWidth: '32px',
+                justifyContent: 'center',
+                padding: '4px',
+              }}>
+              {emoji}
+            </MenuItem>
+          ))}
+        </Box>
+      </Popover>
     </Paper>
   );
 };

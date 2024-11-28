@@ -16,6 +16,7 @@ import { Memo } from '@/types/memo';
 import MemoCard from './MemoCard';
 import MemoForm from './MemoForm';
 import MemoSearch from './MemoSearch';
+import { Priority } from '@/types/priority';
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -25,7 +26,10 @@ const MemoList: React.FC = () => {
   const [editingMemo, setEditingMemo] = useState<Memo | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [currentSearchTerm, setCurrentSearchTerm] = useState('');
-  const [currentPriority, setCurrentPriority] = useState<number | undefined>();
+  const [currentPriority, setCurrentPriority] = useState<
+    Priority | undefined
+  >();
+  const [currentPrefix, setCurrentPrefix] = useState<string | undefined>();
 
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -35,10 +39,18 @@ const MemoList: React.FC = () => {
         fetchMemos({
           searchTerm: currentSearchTerm,
           priority: currentPriority,
+          prefix: currentPrefix,
         })
       );
     }
-  }, [dispatch, loading, hasMore, currentSearchTerm, currentPriority]);
+  }, [
+    dispatch,
+    loading,
+    hasMore,
+    currentSearchTerm,
+    currentPriority,
+    currentPrefix,
+  ]);
 
   // 초기 로딩
   useEffect(() => {
@@ -202,7 +214,6 @@ const MemoList: React.FC = () => {
 
   const handleSearch = useCallback(
     (term: string) => {
-      console.log(term);
       setCurrentSearchTerm(term);
       dispatch(resetMemos());
       dispatch(
@@ -216,20 +227,36 @@ const MemoList: React.FC = () => {
     [dispatch, currentPriority]
   );
 
-  const handleFilter = useCallback(
-    (priority: number) => {
-      console.log(priority);
-      setCurrentPriority(priority);
+  const handlePriorityFilter = useCallback(
+    (priorityValue: Priority | null) => {
+      setCurrentPriority(priorityValue !== null ? priorityValue : undefined);
       dispatch(resetMemos());
       dispatch(
         fetchMemos({
-          priority,
+          priority: priorityValue !== null ? priorityValue : undefined,
           searchTerm: currentSearchTerm,
+          prefix: currentPrefix,
           reset: true,
         })
       );
     },
-    [dispatch, currentSearchTerm]
+    [dispatch, currentSearchTerm, currentPrefix]
+  );
+
+  const handlePrefixFilter = useCallback(
+    (prefix: string) => {
+      setCurrentPrefix(prefix);
+      dispatch(resetMemos());
+      dispatch(
+        fetchMemos({
+          priority: currentPriority,
+          searchTerm: currentSearchTerm,
+          prefix,
+          reset: true,
+        })
+      );
+    },
+    [dispatch, currentPriority, currentSearchTerm]
   );
 
   if (initialLoading) {
@@ -248,7 +275,11 @@ const MemoList: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <MemoForm mode='create' onSubmit={handleCreate} />
 
-      <MemoSearch onSearch={handleSearch} onFilter={handleFilter} />
+      <MemoSearch
+        onSearch={handleSearch}
+        onPriorityFilter={handlePriorityFilter}
+        onPrefixFilter={handlePrefixFilter}
+      />
 
       <Masonry columns={{ sm: 1, lg: 1 }} spacing={2} sx={{ margin: 0 }}>
         {memos.map((memo, index) => (

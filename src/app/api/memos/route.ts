@@ -117,100 +117,47 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// export async function GET(request: NextRequest) {
-//   try {
-//     const searchParams = request.nextUrl.searchParams;
-//     const priority = searchParams.get('priority');
-//     const lastEvaluatedKey = searchParams.get('lastKey');
-//     const limit = 10;
-
-//     // QueryCommandInput 생성
-//     const queryParams: QueryCommandInput = {
-//       TableName: DYNAMODB_TABLE,
-//       Limit: limit,
-//       ScanIndexForward: false, // 최신순 정렬
-//     };
-
-//     if (priority) {
-//       // `priority`가 있는 경우 PRIORITY_UPDATED_INDEX를 사용
-//       queryParams.IndexName = PRIORITY_UPDATED_INDEX;
-//       queryParams.KeyConditionExpression = 'priority = :priority';
-//       queryParams.ExpressionAttributeValues = {
-//         ':priority': Number(priority),
-//       };
-//     } else {
-//       // `priority`가 없는 경우 `UpdatedIndex`를 사용
-//       queryParams.IndexName = UPDATED_INDEX;
-//       queryParams.KeyConditionExpression = 'gsiPartitionKey = :key';
-//       queryParams.ExpressionAttributeValues = {
-//         ':key': GSI_PARTITION_KEY,
-//       };
-//     }
-
-//     // 페이지네이션 처리
-//     if (lastEvaluatedKey) {
-//       queryParams.ExclusiveStartKey = JSON.parse(lastEvaluatedKey);
-//     }
-
-//     // DynamoDB 쿼리 실행
-//     const result = await docClient.send(new QueryCommand(queryParams));
-
-//     // 응답 반환
-//     return NextResponse.json({
-//       items: result.Items || [],
-//       lastEvaluatedKey: result.LastEvaluatedKey || null,
-//     });
-//   } catch (error) {
-//     console.error('메모 불러오기 실패:', error);
-//     return NextResponse.json(
-//       { error: '메모를 불러오는 데 실패했습니다.' },
-//       { status: 500 }
-//     );
-//   }
-// }
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const priority = searchParams.get('priority');
+    const prefix = searchParams.get('prefix');
     const searchTerm = searchParams.get('searchTerm')?.toLowerCase();
     const lastEvaluatedKey = searchParams.get('lastKey');
     const limit = 10;
 
-    // QueryCommandInput 생성
     const queryParams: QueryCommandInput = {
       TableName: DYNAMODB_TABLE,
       Limit: limit,
-      ScanIndexForward: false, // 최신순 정렬
+      ScanIndexForward: false,
     };
 
-    // ExpressionAttributeValues 초기화
     const expressionAttributeValues: Record<string, any> = {};
-
-    // ExpressionAttributeNames 초기화
     const expressionAttributeNames: Record<string, string> = {};
+    let filterExpressions: string[] = [];
 
     if (priority) {
-      // priority가 있는 경우 PRIORITY_UPDATED_INDEX 사용
       queryParams.IndexName = PRIORITY_UPDATED_INDEX;
       queryParams.KeyConditionExpression = 'priority = :priority';
       expressionAttributeValues[':priority'] = Number(priority);
     } else {
-      // priority가 없는 경우 UPDATED_INDEX 사용
       queryParams.IndexName = UPDATED_INDEX;
       queryParams.KeyConditionExpression = 'gsiPartitionKey = :key';
       expressionAttributeValues[':key'] = GSI_PARTITION_KEY;
     }
 
-    // 검색어가 있는 경우 FilterExpression 추가
-    if (searchTerm) {
-      // 제목과 내용에서 검색
-      queryParams.FilterExpression =
-        'contains(#title, :searchTerm) OR ' +
-        'contains(#content, :searchTerm) OR ' +
-        'contains(#summary, :searchTerm) OR ' +
-        'contains(#tags, :searchTerm)';
+    if (prefix) {
+      filterExpressions.push('prefix = :prefix');
+      expressionAttributeValues[':prefix'] = prefix;
+    }
 
+    if (searchTerm) {
+      filterExpressions.push(
+        '(contains(#title, :searchTerm) OR ' +
+          'contains(#content, :searchTerm) OR ' +
+          'contains(#summary, :searchTerm) OR ' +
+          'contains(#tags, :searchTerm))'
+      );
       expressionAttributeValues[':searchTerm'] = searchTerm;
       expressionAttributeNames['#title'] = 'title';
       expressionAttributeNames['#content'] = 'content';
@@ -218,23 +165,27 @@ export async function GET(request: NextRequest) {
       expressionAttributeNames['#tags'] = 'tags';
     }
 
-    // ExpressionAttributeValues 설정
-    queryParams.ExpressionAttributeValues = expressionAttributeValues;
+    // 필터 표현식 조합
+    if (filterExpressions.length > 0) {
+      queryParams.FilterExpression = filterExpressions.join(' AND ');
+    }
 
-    // ExpressionAttributeNames가 있는 경우에만 추가
+    // ExpressionAttributeValues 설정
+    if (Object.keys(expressionAttributeValues).length > 0) {
+      queryParams.ExpressionAttributeValues = expressionAttributeValues;
+    }
+
+    // ExpressionAttributeNames 설정
     if (Object.keys(expressionAttributeNames).length > 0) {
       queryParams.ExpressionAttributeNames = expressionAttributeNames;
     }
 
-    // 페이지네이션 처리
     if (lastEvaluatedKey) {
       queryParams.ExclusiveStartKey = JSON.parse(lastEvaluatedKey);
     }
 
-    // DynamoDB 쿼리 실행
     const result = await docClient.send(new QueryCommand(queryParams));
 
-    // 응답 반환
     return NextResponse.json({
       items: result.Items || [],
       lastEvaluatedKey: result.LastEvaluatedKey || null,

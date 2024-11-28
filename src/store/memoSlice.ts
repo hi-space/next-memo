@@ -20,6 +20,7 @@ const initialState: MemoState = {
 interface FetchMemoParams {
   priority?: number;
   searchTerm?: string;
+  prefix?: string;
   reset?: boolean; // 새 검색/필터 시 목록 초기화를 위한 플래그
 }
 
@@ -31,7 +32,6 @@ export const fetchMemos = createAsyncThunk(
 
     const urlParams = new URLSearchParams();
 
-    // reset이 true가 아닐 때만 lastEvaluatedKey 사용
     if (lastEvaluatedKey && !params.reset) {
       urlParams.append('lastKey', JSON.stringify(lastEvaluatedKey));
     }
@@ -42,6 +42,10 @@ export const fetchMemos = createAsyncThunk(
 
     if (params.searchTerm) {
       urlParams.append('searchTerm', params.searchTerm);
+    }
+
+    if (params.prefix !== undefined) {
+      urlParams.append('prefix', params.prefix);
     }
 
     const response = await fetch(`/api/memos?${urlParams}`);
