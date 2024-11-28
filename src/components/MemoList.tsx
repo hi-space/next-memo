@@ -259,6 +259,22 @@ const MemoList: React.FC = () => {
     [dispatch, currentPriority, currentSearchTerm]
   );
 
+  const handleRefresh = useCallback(() => {
+    // 모든 필터 상태 초기화
+    setCurrentSearchTerm('');
+    setCurrentPriority(undefined);
+    setCurrentPrefix(undefined);
+
+    // 로딩 상태 설정
+    setInitialLoading(true);
+
+    // 메모 상태 리셋
+    dispatch(resetMemos());
+
+    // 필터 없이 처음부터 다시 데이터 불러오기
+    dispatch(fetchMemos({})).then(() => setInitialLoading(false));
+  }, [dispatch]);
+
   if (initialLoading) {
     return (
       <Box display='flex' justifyContent='center' p={4}>
@@ -279,6 +295,7 @@ const MemoList: React.FC = () => {
         onSearch={handleSearch}
         onPriorityFilter={handlePriorityFilter}
         onPrefixFilter={handlePrefixFilter}
+        onRefresh={handleRefresh}
       />
 
       <Masonry columns={{ sm: 1, lg: 1 }} spacing={2} sx={{ margin: 0 }}>

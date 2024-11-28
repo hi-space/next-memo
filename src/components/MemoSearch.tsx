@@ -16,16 +16,19 @@ import InputAdornment from '@mui/material/InputAdornment';
 import PriorityBadge from './PriorityBadge';
 import { Priority, priorityEmojis } from '@/types/priority';
 import { Emojis } from '@/types/emoji';
+
 interface MemoSearchProps {
   onSearch: (value: string) => void;
   onPriorityFilter: (value: Priority | null) => void;
   onPrefixFilter: (value: string) => void;
+  onRefresh: () => void;
 }
 
 const MemoSearch: React.FC<MemoSearchProps> = ({
   onSearch,
   onPriorityFilter,
   onPrefixFilter,
+  onRefresh,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [priority, setPriority] = useState<Priority | null>(null);
@@ -53,12 +56,66 @@ const MemoSearch: React.FC<MemoSearchProps> = ({
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
           gap: 2,
           alignItems: { sm: 'center' },
           justifyContent: 'space-between',
         }}>
-        <Box sx={{ display: 'flex', gap: 1, flex: 1, alignItems: 'flex-end' }}>
+        <Popover
+          open={Boolean(emojiAnchorEl)}
+          anchorEl={emojiAnchorEl}
+          onClose={() => setEmojiAnchorEl(null)}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}>
+          <Box
+            sx={{
+              p: 1,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+              gap: 0.5,
+              width: 'fit-content',
+              maxWidth: '200px',
+            }}>
+            <MenuItem
+              dense
+              onClick={() => {
+                setPrefix('');
+                setEmojiAnchorEl(null);
+                onPrefixFilter('');
+              }}
+              sx={{
+                minWidth: '32px',
+                justifyContent: 'center',
+                padding: '4px',
+              }}>
+              <em>❌</em>
+            </MenuItem>
+            {Emojis.map((emoji) => (
+              <MenuItem
+                key={emoji}
+                onClick={() => {
+                  setPrefix(emoji);
+                  setEmojiAnchorEl(null);
+                  onPrefixFilter(emoji);
+                }}
+                dense
+                sx={{
+                  minWidth: '32px',
+                  justifyContent: 'center',
+                  padding: '4px',
+                }}>
+                {emoji}
+              </MenuItem>
+            ))}
+          </Box>
+        </Popover>
+
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flex: 1 }}>
           <IconButton
             size='small'
             onClick={(e) => setEmojiAnchorEl(e.currentTarget)}
@@ -67,6 +124,7 @@ const MemoSearch: React.FC<MemoSearchProps> = ({
               height: 32,
               fontSize: '1.2rem',
               mb: 0.5,
+              flexShrink: 0,
             }}>
             {prefix || <EmojiEmotionsIcon sx={{ fontSize: '1.2rem' }} />}
           </IconButton>
@@ -77,7 +135,7 @@ const MemoSearch: React.FC<MemoSearchProps> = ({
             value={searchTerm}
             onChange={handleSearch}
             variant='standard'
-            sx={{ flex: 1 }}
+            sx={{ flex: 1, minWidth: 100 }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -92,7 +150,8 @@ const MemoSearch: React.FC<MemoSearchProps> = ({
           />
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
           <IconButton
             onClick={(e) => setPriorityAnchorEl(e.currentTarget)}
             sx={{ p: 0 }}>
@@ -121,6 +180,19 @@ const MemoSearch: React.FC<MemoSearchProps> = ({
                 label='전체'
               />
             )}
+          </IconButton>
+
+          <IconButton
+            onClick={() => onRefresh()}
+            size='small'
+            sx={{
+              p: 0.5,
+              color: 'text.secondary',
+              '&:hover': {
+                color: 'primary.main',
+              },
+            }}>
+            <RefreshIcon />
           </IconButton>
 
           <Popover
@@ -216,61 +288,6 @@ const MemoSearch: React.FC<MemoSearchProps> = ({
           </Popover>
         </Box>
       </Box>
-
-      <Popover
-        open={Boolean(emojiAnchorEl)}
-        anchorEl={emojiAnchorEl}
-        onClose={() => setEmojiAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}>
-        <Box
-          sx={{
-            p: 1,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
-            gap: 0.5,
-            width: 'fit-content',
-            maxWidth: '200px',
-          }}>
-          <MenuItem
-            dense
-            onClick={() => {
-              setPrefix('');
-              setEmojiAnchorEl(null);
-              onPrefixFilter('');
-            }}
-            sx={{
-              minWidth: '32px',
-              justifyContent: 'center',
-              padding: '4px',
-            }}>
-            <em>❌</em>
-          </MenuItem>
-          {Emojis.map((emoji) => (
-            <MenuItem
-              key={emoji}
-              onClick={() => {
-                setPrefix(emoji);
-                setEmojiAnchorEl(null);
-                onPrefixFilter(emoji);
-              }}
-              dense
-              sx={{
-                minWidth: '32px',
-                justifyContent: 'center',
-                padding: '4px',
-              }}>
-              {emoji}
-            </MenuItem>
-          ))}
-        </Box>
-      </Popover>
     </Paper>
   );
 };
