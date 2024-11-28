@@ -17,24 +17,40 @@ const initialState: MemoState = {
   lastEvaluatedKey: null,
 };
 
+interface FetchMemoParams {
+  priority?: number;
+  searchTerm?: string;
+  reset?: boolean; // 새 검색/필터 시 목록 초기화를 위한 플래그
+}
+
 export const fetchMemos = createAsyncThunk(
   'memos/fetchMemos',
-  async (params: { priority?: number } = {}, { getState }) => {
+  async (params: FetchMemoParams = {}, { getState }) => {
     const state = getState() as { memos: MemoState };
     const { lastEvaluatedKey } = state.memos;
 
     const urlParams = new URLSearchParams();
-    if (lastEvaluatedKey) {
+
+    // reset이 true가 아닐 때만 lastEvaluatedKey 사용
+    if (lastEvaluatedKey && !params.reset) {
       urlParams.append('lastKey', JSON.stringify(lastEvaluatedKey));
     }
+
     if (params.priority !== undefined) {
       urlParams.append('priority', params.priority.toString());
+    }
+
+    if (params.searchTerm) {
+      urlParams.append('searchTerm', params.searchTerm);
     }
 
     const response = await fetch(`/api/memos?${urlParams}`);
     if (!response.ok) throw new Error('메모를 불러오는데 실패했습니다.');
     const data = await response.json();
-    return data;
+    return {
+      ...data,
+      reset: params.reset,
+    };
   }
 );
 
@@ -102,8 +118,12 @@ const memoSlice = createSlice({
       .addCase(fetchMemos.fulfilled, (state, action) => {
         const newMemos = action.payload.items;
 
-        // 기존 데이터에 새 데이터를 추가
-        state.memos = [...state.memos, ...newMemos];
+        // reset이 true면 목록 초기화, 아니면 기존 목록에 추가
+        if (action.payload.reset) {
+          state.memos = newMemos;
+        } else {
+          state.memos = [...state.memos, ...newMemos];
+        }
 
         // 페이지네이션 처리
         state.lastEvaluatedKey = action.payload.lastEvaluatedKey;

@@ -15,6 +15,7 @@ import Masonry from '@mui/lab/Masonry';
 import { Memo } from '@/types/memo';
 import MemoCard from './MemoCard';
 import MemoForm from './MemoForm';
+import MemoSearch from './MemoSearch';
 
 const MemoList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -23,13 +24,21 @@ const MemoList: React.FC = () => {
   );
   const [editingMemo, setEditingMemo] = useState<Memo | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+  const [currentPriority, setCurrentPriority] = useState<number | undefined>();
+
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
-      dispatch(fetchMemos({}));
+      dispatch(
+        fetchMemos({
+          searchTerm: currentSearchTerm,
+          priority: currentPriority,
+        })
+      );
     }
-  }, [dispatch, loading, hasMore]);
+  }, [dispatch, loading, hasMore, currentSearchTerm, currentPriority]);
 
   // 초기 로딩
   useEffect(() => {
@@ -191,6 +200,38 @@ const MemoList: React.FC = () => {
     [dispatch]
   );
 
+  const handleSearch = useCallback(
+    (term: string) => {
+      console.log(term);
+      setCurrentSearchTerm(term);
+      dispatch(resetMemos());
+      dispatch(
+        fetchMemos({
+          searchTerm: term,
+          priority: currentPriority,
+          reset: true,
+        })
+      );
+    },
+    [dispatch, currentPriority]
+  );
+
+  const handleFilter = useCallback(
+    (priority: number) => {
+      console.log(priority);
+      setCurrentPriority(priority);
+      dispatch(resetMemos());
+      dispatch(
+        fetchMemos({
+          priority,
+          searchTerm: currentSearchTerm,
+          reset: true,
+        })
+      );
+    },
+    [dispatch, currentSearchTerm]
+  );
+
   if (initialLoading) {
     return (
       <Box display='flex' justifyContent='center' p={4}>
@@ -206,6 +247,8 @@ const MemoList: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <MemoForm mode='create' onSubmit={handleCreate} />
+
+      <MemoSearch onSearch={handleSearch} onFilter={handleFilter} />
 
       <Masonry columns={{ sm: 1, lg: 1 }} spacing={2} sx={{ margin: 0 }}>
         {memos.map((memo, index) => (

@@ -117,10 +117,63 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// export async function GET(request: NextRequest) {
+//   try {
+//     const searchParams = request.nextUrl.searchParams;
+//     const priority = searchParams.get('priority');
+//     const lastEvaluatedKey = searchParams.get('lastKey');
+//     const limit = 10;
+
+//     // QueryCommandInput 생성
+//     const queryParams: QueryCommandInput = {
+//       TableName: DYNAMODB_TABLE,
+//       Limit: limit,
+//       ScanIndexForward: false, // 최신순 정렬
+//     };
+
+//     if (priority) {
+//       // `priority`가 있는 경우 PRIORITY_UPDATED_INDEX를 사용
+//       queryParams.IndexName = PRIORITY_UPDATED_INDEX;
+//       queryParams.KeyConditionExpression = 'priority = :priority';
+//       queryParams.ExpressionAttributeValues = {
+//         ':priority': Number(priority),
+//       };
+//     } else {
+//       // `priority`가 없는 경우 `UpdatedIndex`를 사용
+//       queryParams.IndexName = UPDATED_INDEX;
+//       queryParams.KeyConditionExpression = 'gsiPartitionKey = :key';
+//       queryParams.ExpressionAttributeValues = {
+//         ':key': GSI_PARTITION_KEY,
+//       };
+//     }
+
+//     // 페이지네이션 처리
+//     if (lastEvaluatedKey) {
+//       queryParams.ExclusiveStartKey = JSON.parse(lastEvaluatedKey);
+//     }
+
+//     // DynamoDB 쿼리 실행
+//     const result = await docClient.send(new QueryCommand(queryParams));
+
+//     // 응답 반환
+//     return NextResponse.json({
+//       items: result.Items || [],
+//       lastEvaluatedKey: result.LastEvaluatedKey || null,
+//     });
+//   } catch (error) {
+//     console.error('메모 불러오기 실패:', error);
+//     return NextResponse.json(
+//       { error: '메모를 불러오는 데 실패했습니다.' },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const priority = searchParams.get('priority');
+    const searchTerm = searchParams.get('searchTerm')?.toLowerCase();
     const lastEvaluatedKey = searchParams.get('lastKey');
     const limit = 10;
 
@@ -131,20 +184,46 @@ export async function GET(request: NextRequest) {
       ScanIndexForward: false, // 최신순 정렬
     };
 
+    // ExpressionAttributeValues 초기화
+    const expressionAttributeValues: Record<string, any> = {};
+
+    // ExpressionAttributeNames 초기화
+    const expressionAttributeNames: Record<string, string> = {};
+
     if (priority) {
-      // `priority`가 있는 경우 PRIORITY_UPDATED_INDEX를 사용
+      // priority가 있는 경우 PRIORITY_UPDATED_INDEX 사용
       queryParams.IndexName = PRIORITY_UPDATED_INDEX;
       queryParams.KeyConditionExpression = 'priority = :priority';
-      queryParams.ExpressionAttributeValues = {
-        ':priority': Number(priority),
-      };
+      expressionAttributeValues[':priority'] = Number(priority);
     } else {
-      // `priority`가 없는 경우 `UpdatedIndex`를 사용
+      // priority가 없는 경우 UPDATED_INDEX 사용
       queryParams.IndexName = UPDATED_INDEX;
       queryParams.KeyConditionExpression = 'gsiPartitionKey = :key';
-      queryParams.ExpressionAttributeValues = {
-        ':key': GSI_PARTITION_KEY,
-      };
+      expressionAttributeValues[':key'] = GSI_PARTITION_KEY;
+    }
+
+    // 검색어가 있는 경우 FilterExpression 추가
+    if (searchTerm) {
+      // 제목과 내용에서 검색
+      queryParams.FilterExpression =
+        'contains(#title, :searchTerm) OR ' +
+        'contains(#content, :searchTerm) OR ' +
+        'contains(#summary, :searchTerm) OR ' +
+        'contains(#tags, :searchTerm)';
+
+      expressionAttributeValues[':searchTerm'] = searchTerm;
+      expressionAttributeNames['#title'] = 'title';
+      expressionAttributeNames['#content'] = 'content';
+      expressionAttributeNames['#summary'] = 'summary';
+      expressionAttributeNames['#tags'] = 'tags';
+    }
+
+    // ExpressionAttributeValues 설정
+    queryParams.ExpressionAttributeValues = expressionAttributeValues;
+
+    // ExpressionAttributeNames가 있는 경우에만 추가
+    if (Object.keys(expressionAttributeNames).length > 0) {
+      queryParams.ExpressionAttributeNames = expressionAttributeNames;
     }
 
     // 페이지네이션 처리
