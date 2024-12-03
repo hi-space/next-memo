@@ -1,3 +1,5 @@
+![](public/next-memo.png)
+
 # NEXT Memo
 
 A feature-rich fullstack memo application built with Next.js that supports markdown editing, file uploads, and AI-powered content analysis.
@@ -6,38 +8,33 @@ A feature-rich fullstack memo application built with Next.js that supports markd
 
 ### Core Functionality
 
-- 📝 **Markdown Editor**: Rich text editing with markdown support
-- ✨ **CRUD Operations**: Create, Read, Update, and Delete memos
-- 🏷️ **Smart Categorization**: Organize memos using emoji categories
-- ⭐ **Priority System**: Filter memos based on importance levels
-- 🔍 **Full-text Search**: Powerful search capabilities powered by DynamoDB
+- 📝 **Markdown Support**: Create and edit memos in markdown format
+- ✨ **CRUD Management**: Full memo lifecycle management
+- 🏷️ **Emoji Categories**: Quick categorization using emojis
+- ⭐ **Priority Levels**: Important memo filtering
+- 🔍 **Full-text Search**: DynamoDB-powered search functionality
+- ♾️ **Infinite Scroll**: Dynamic memo loading while scrolling
 
 ### File Management
 
-- 📁 **Drag & Drop**: Intuitive file upload interface
-- 🖼️ **Image Support**: Upload and display images in memos
-- 📎 **Auto Markdown**: Automatic markdown conversion for uploaded files
-- ⬇️ **Downloads**: Easy file download functionality
-- 🗄️ **CDN Delivery**: Fast file access through CloudFront CDN
+- 📁 **Drag & Drop Upload**: Easy file uploading with preview
+- 🖼️ **Image Support**: Image upload with markdown conversion
+- ⬇️ **File Download**: Direct file downloads
+- 🗄️ **CDN Integration**: Fast media delivery via CloudFront
 
-### AI Features
+### AI Integration
 
 - 🤖 **Auto Summary**: Automatic memo summarization using Amazon Bedrock
-- 🏷️ **Smart Tags**: AI-powered tag generation
-- 📊 **Content Analysis**: Intelligent content processing
+- 🏷️ **Smart Tags**: AI-generated memo tags
+- 📊 **Content Analysis**: Intelligent memo processing
 
 ## 🛠️ Tech Stack
 
 ### Application
 
 - **Framework**: Next.js (Fullstack)
-  - Server-side: Next.js API Routes & Server Actions
-  - Client-side: React Components & Hooks
-- **Features**:
-  - Responsive markdown editor
-  - Real-time content updates
-  - Drag & drop file upload interface
-  - Dynamic content rendering
+  - **Frontend**: React with Redux state management
+  - **Backend**: Next.js API Routes for server-side logic
 
 ### AWS Services
 
@@ -56,50 +53,36 @@ A feature-rich fullstack memo application built with Next.js that supports markd
 
 ```mermaid
 graph TD
-    %% Styling
-    classDef frontend fill:#f9f9f9,stroke:#ff6b6b,stroke-width:2px;
-    classDef backend fill:#f1f8ff,stroke:#4dabf7,stroke-width:2px;
-    classDef infrastructure fill:#f8f9fa,stroke:#20c997,stroke-width:2px;
+  %% Styling
+  classDef frontend fill:#f9f9f9,stroke:#ff6b6b,stroke-width:2px;
+  classDef backend fill:#f1f8ff,stroke:#4dabf7,stroke-width:2px;
+  classDef infrastructure fill:#f8f9fa,stroke:#20c997,stroke-width:2px;
 
-    %% Frontend Components
-    Client[Client Browser]
-    class Client frontend;
+  %% Frontend Components
+  Client["Client Browser<br/>(React + Redux)"]
+  class Client frontend;
 
-    %% Infrastructure Components
-    ALB[Application Load Balancer]
-    CloudFront[CloudFront CDN]
-    class ALB,CloudFront infrastructure;
+  %% Infrastructure Components
+  ALB["Application Load Balancer"]
+  CloudFront["CloudFront CDN"]
+  class ALB,CloudFront infrastructure;
 
-    %% Backend Components
-    ECS[ECS Container<br/>Next.js Server]
-    DynamoDB[DynamoDB<br/>Memo Data]
-    S3[S3 Storage<br/>File Storage]
-    Bedrock[Amazon Bedrock<br/>Gen AI]
-    class ECS,DynamoDB,S3,Bedrock backend;
+  %% Backend Components
+  ECS["ECS Container<br/>(Next.js Server)"]
+  DynamoDB["DynamoDB<br/>(Memo Data Storage)"]
+  S3["S3 Storage<br/>(File Management)"]
+  Bedrock["Amazon Bedrock<br/>(Gen AI Service)"]
+  class ECS,DynamoDB,S3,Bedrock backend;
 
-    %% Connections
-    Client --> ALB
-    ALB --> ECS
-    ECS --> DynamoDB
-    ECS --> S3
-    ECS --> Bedrock
-    S3 --> CloudFront
-    CloudFront --> Client
+  %% Connections
+  Client --> ALB
+  ALB --> ECS
+  ECS --> DynamoDB
+  ECS --> S3
+  ECS --> Bedrock
+  S3 --> CloudFront
+  CloudFront --> Client
 ```
-
-## 📦 Data Structure
-
-### DynamoDB Schema
-
-- **Table**: `next-memo`
-- **Primary Key**: `id` (String)
-- **Global Secondary Indexes**:
-  - `UpdatedIndex`:
-    - HASH: `gsiPartitionKey`
-    - RANGE: `updatedAt`
-  - `PriorityUpdatedIndex`:
-    - HASH: `priority`
-    - RANGE: `updatedAt`
 
 ## 🚀 Setup & Deployment
 
@@ -108,16 +91,6 @@ graph TD
 - AWS CLI configured
 - Node.js 18 or higher
 - Docker
-
-### Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run the development server
-npm run dev
-```
 
 ### Local Environment Setup
 
@@ -130,7 +103,31 @@ AWS_S3_BUCKET=your-bucket-name
 AWS_CLOUDFRONT_URL=your-cloudfront-domain
 ```
 
-### Database Setup
+### Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
+```
+
+## 📦 Data Structure
+
+### DynamoDB Schema
+
+- **Table**: `next-memo`
+- **Primary Key**: `id` (String)
+- **Global Secondary Indexes**:
+  - `UpdatedIndex`
+    - HASH: `gsiPartitionKey`
+    - RANGE: `updatedAt`
+  - `PriorityUpdatedIndex`
+    - HASH: `priority`
+    - RANGE: `updatedAt`
+
+### DynamoDB Setup
 
 <details>
 <summary>DynamoDB Table Creation</summary>
