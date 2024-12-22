@@ -30,6 +30,40 @@ export const fetchMemos = createAsyncThunk(
     const state = getState() as { memos: MemoState };
     const { lastEvaluatedKey } = state.memos;
 
+    // 검색 조건이 있는 경우 search API 사용
+    if (params.searchTerm) {
+      const filters: Record<string, any> = {};
+
+      if (params.priority !== undefined) {
+        filters.priority = Number(params.priority);
+      }
+
+      if (params.prefix !== undefined) {
+        filters.prefix = params.prefix;
+      }
+
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: params.searchTerm,
+          ...(Object.keys(filters).length > 0 && { filters }),
+          size: 20,
+        }),
+      });
+
+      if (!response.ok) throw new Error('검색에 실패했습니다.');
+      const data = await response.json();
+
+      return {
+        items: data.hits,
+        lastEvaluatedKey: data.lastEvaluatedKey,
+        reset: params.reset,
+      };
+    }
+
     const urlParams = new URLSearchParams();
 
     if (lastEvaluatedKey && !params.reset) {

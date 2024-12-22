@@ -43,6 +43,7 @@ jobs:
           echo "AWS_BEDROCK_REGION=${{ secrets.AWS_BEDROCK_REGION }}" >> $GITHUB_ENV
           echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> $GITHUB_ENV
           echo "AWS_CLOUDFRONT_URL=${{ secrets.AWS_CLOUDFRONT_URL }}" >> $GITHUB_ENV
+          echo "AWS_OPENSEARCH_ENDPOINT=${{ secrets.AWS_OPENSEARCH_ENDPOINT }}" >> $GITHUB_ENV
 
       - name: Login to Amazon ECR
         id: login-ecr

@@ -13,9 +13,12 @@ MAX_RETRIES = 10
 RETRY_DELAY = 2  # seconds
 
 
+AWS_OPENSEARCH_ENDPOINT="https://69jgxbfclj25cww04bk4.ap-northeast-2.aoss.amazonaws.com"
+AWS_REGION="ap-northeast-2"
+
 def get_aws_auth():
     credentials = boto3.Session().get_credentials()
-    region = os.environ['REGION']
+    region = AWS_REGION
     return AWS4Auth(
         credentials.access_key,
         credentials.secret_key,
@@ -25,8 +28,8 @@ def get_aws_auth():
     )
 
 def create_opensearch_client():
-    host = os.environ['OPENSEARCH_ENDPOINT'].replace('https://', '')
-    region = os.environ['REGION']
+    host = AWS_OPENSEARCH_ENDPOINT.replace('https://', '')
+    region = AWS_REGION
     
     return OpenSearch(
         hosts=[{'host': host, 'port': 443}],
@@ -59,37 +62,83 @@ def wait_for_index_ready(client, index_name):
     print(f"Index did not become ready after {MAX_RETRIES} attempts")
     return False
 
-def process_record(record, client):
-    if record['eventName'] == 'REMOVE':
-        document_id = record['dynamodb']['OldImage']['id']['S']
-        try:
-            client.delete(
-                index=COLLECTION_NAME,
-                id=document_id
-            )
-        except Exception as e:
-            print(f"Error deleting document {document_id}: {str(e)}")
-    else: # INSERT, MODIFY
-        new_image = record['dynamodb']['NewImage']
-                
+
+def process_item(doc, opensearch_client):
+    try:   
         document = {
-            'title': new_image['title']['S'],
-            'content': new_image['content']['S'],
-            'summary': new_image.get('summary', {}).get('S', ''),
-            'tags': [item.get('S', '') for item in new_image.get('tags', {}).get('L', [])],
-            'prefix': new_image.get('prefix', {}).get('S', ''),
-            'priority': int(new_image.get('priority', {}).get('N', '0')),
-            'updatedAt': int(new_image['updatedAt']['N'])
+            'title': doc['title']['S'],
+            'content': doc['content']['S'],
+            'summary': doc.get('summary', {}).get('S', ''),
+            'tags': [item.get('S', '') for item in doc.get('tags', {}).get('L', [])],
+            'prefix': doc.get('prefix', {}).get('S', ''),
+            'priority': int(doc.get('priority', {}).get('N', '0')),
+            'updatedAt': int(doc['updatedAt']['N'])
         }
-        
-        try:
-            client.index(
-                index=COLLECTION_NAME,
-                body=document,
-                id=new_image['id']['S'],
-            )
-        except Exception as e:
-            print(f"Error indexing document: {str(e)}")
+    
+        opensearch_client.index(
+            index=COLLECTION_NAME,
+            body=document,
+            id=doc['id']['S']
+        )
+        return True
+    except Exception as e:
+        print(f"Error processing item {doc.get('id', {}).get('S')}: {str(e)}")
+        return False
+
+def migrate_data():
+    # DynamoDB 클라이언트 생성
+    dynamodb = boto3.client('dynamodb', region_name=AWS_REGION)
+    opensearch_client = create_opensearch_client()
+    
+    # 페이지네이션을 위한 변수들
+    last_evaluated_key = None
+    processed_count = 0
+    error_count = 0
+    batch_size = 25  # 한 번에 처리할 항목 수
+    
+    print("Starting migration...")
+    
+    try:
+        while True:
+            # DynamoDB 스캔 파라미터 설정
+            scan_params = {
+                'TableName': 'next-memo',
+                'Limit': batch_size
+            }
+            
+            if last_evaluated_key:
+                scan_params['ExclusiveStartKey'] = last_evaluated_key
+            
+            # DynamoDB 테이블 스캔
+            response = dynamodb.scan(**scan_params)
+            items = response.get('Items', [])
+            
+            if not items:
+                break
+            
+            for item in items:
+                res = process_item(item, opensearch_client)
+                processed_count += 1
+                
+                if not res:
+                    error_count += 1
+            
+            # 다음 페이지 존재 여부 확인
+            last_evaluated_key = response.get('LastEvaluatedKey')
+            if not last_evaluated_key:
+                break
+            
+            # API 제한을 위한 잠시 대기
+            time.sleep(1)
+    
+    except Exception as e:
+        print(f"Migration failed: {str(e)}")
+        return False
+    
+    print(f"\nMigration completed:")
+    print(f"Total processed: {processed_count}")
+    print(f"Total errors: {error_count}")
+    return True
 
 def create_index_if_not_exists(client):
     try:
@@ -192,23 +241,15 @@ def create_index_if_not_exists(client):
         print(f"Error creating index: {str(e)}")
         return False
 
-def handler(event, context):
+if __name__ == "__main__":
     client = create_opensearch_client()
         
     try:
-        # 인덱스 생성 및 준비 상태 확인
-        index_ready = create_index_if_not_exists(client)
-        
-        if index_ready:
-            # DynamoDB 스트림 이벤트 처리
-            for record in event['Records']:
-                process_record(record, client)
+        # index_ready = create_index_if_not_exists(client)
+        # if index_ready:
+        migrate_data()
             
     except Exception as e:
         print(f"Error in handler: {str(e)}")
         raise e
     
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Processing complete')
-    }

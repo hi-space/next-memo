@@ -38,23 +38,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
+    const { prefix, priority, ...otherFilters } = filters;
+
     let searchBody = {
       query: {
         bool: {
-          should: [
+          must: [
             {
               multi_match: {
                 query: query,
-                fields: ['title', 'content', 'summary'],
+                fields: ['title^2', 'content', 'summary', 'tags'],
+                type: 'best_fields',
                 fuzziness: 'AUTO',
+                operator: 'or',
               },
             },
           ],
-          ...(Object.keys(filters).length > 0 && {
-            filter: Object.entries(filters).map(([field, value]) => ({
+          filter: [
+            ...(prefix ? [{ term: { prefix: prefix } }] : []),
+            ...(priority !== undefined
+              ? [{ term: { priority: priority } }]
+              : []),
+            ...Object.entries(otherFilters).map(([field, value]) => ({
               term: { [field]: value },
             })),
-          }),
+          ],
         },
       },
       size: size,
