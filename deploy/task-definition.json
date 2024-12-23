@@ -29,6 +29,10 @@
       {
         "name": "AWS_CLOUDFRONT_URL",
         "value": "${AWS_CLOUDFRONT_URL}"
+      },
+      {
+        "name": "AWS_OPENSEARCH_ENDPOINT",
+        "value": "${AWS_OPENSEARCH_ENDPOINT}"
       }
     ],
     "essential": true
