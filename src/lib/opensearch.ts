@@ -11,7 +11,7 @@ const osClient = new Client({
       return credentialsProvider();
     },
   }),
-  node: process.env.AWS_OPENSEARCH_ENDPOINT,
+  node: process.env.AWS_OPENSEARCH_ENDPOINT || 'https://69jgxbfclj25cww04bk4.ap-northeast-2.aoss.amazonaws.com',
 });
 
 export default osClient;
